@@ -1,4 +1,5 @@
-= Scripts to add data to Wikidata =
+Scripts to add data to Wikidata
+===============================
 
 Folders 'github': Add links to Github-repositories to wikidata-items
 
