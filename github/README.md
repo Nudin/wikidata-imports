@@ -1,10 +1,10 @@
 Scripts to add data to Wikidata
 ===============================
 
-Folders 'github': Add links to Github-repositories to wikidata-items
+Folder 'github': Add links to Github-repositories to wikidata-items
 
 Script:
- - website.py
+ - website.py (pywikibot)
    - Search for items where a github-repo is given as official website
      and add it to the item as repo
  - byname.sh
