@@ -1,0 +1,3 @@
+[submodule "github/github-wikidata-bot"]
+	path = github/github-wikidata-bot
+	url = git@github.com:Nudin/github-wikidata-bot.git
