@@ -1,0 +1,6 @@
+SELECT DISTINCT ?item ?name WHERE {
+  ?item wdt:P31 wd:Q34770.
+  ?item rdfs:label ?name.
+  filter (lang(?name) = "en") .
+  FILTER(STRSTARTS(?name, "German")).
+}
