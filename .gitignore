@@ -3,6 +3,7 @@ user-config.py
 pywikibot.lwp
 throttle.ctrl
 apicache
+openhub/mykey
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
