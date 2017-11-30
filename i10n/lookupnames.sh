@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [[ ${#} -eq 0 ]]; then
+  file=libreoffice
+else
+  file=$1
+fi
+
 while read lang; do
   result=$(curl -s -d "query=$(sed "s/German/$lang/" lookupname.rq)" \
                    -d "format=json" https://query.wikidata.org/sparql)
@@ -8,7 +14,7 @@ while read lang; do
        | jq '.results.bindings[0].item.value' \
        | tr -d \" | cut -d/ -f5
   else
-    echo "Unambiguous language $lang"
+    echo "Unambiguous language $lang" >&2
     continue
   fi
-done < libreoffice 
+done < $file
