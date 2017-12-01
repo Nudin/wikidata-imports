@@ -9,6 +9,8 @@ query = """
 SELECT ?item ?itemLabel ?openhubname WHERE 
 {
   ?item wdt:P1972 ?openhubname.
+  MINUS { ?item wdt:P31*/wdt:P279* wd:Q9135 }.
+  FILTER NOT EXISTS { ?item wdt:P277 ?lang }.
   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
 }
 """
@@ -28,20 +30,35 @@ wdlist = runquery(wdqurl + urllib.parse.quote_plus(query))
 
 for software in wdlist['bindings']:
     qid = software['item']['value'][31:]
-    openhubname = software['itemLabel']['value']
-    softwarename = software['openhubname']['value']
+    softwarename = software['itemLabel']['value']
+    openhubname = software['openhubname']['value']
 
-    url = apiurl % (softwarename, key)
+    url = apiurl % (openhubname, key)
     r = requests.get(url)
     if r.status_code != 200:
-        print("Error")
-        exit
+        print("Error\n")
+        continue
     root = ET.fromstring(r.text)
     openhub_url=root.find("result/project/html_url")
-    main_lang=root.find("result/project/analysis/main_language_name").text
+    #import code
+    #code.interact(local=locals())
 
     print(softwarename)
     print(openhubname)
-    print(main_lang)
+    main_lang=root.findtext("result/project/analysis/main_language_name")
+    if main_lang is not None:
+        print(main_lang)
+        pass # Wikidata-Editing
+
+    licensename=root.findtext("result/project/licenses/license/name")
+    if licensename is not None:
+        print(licensename)
+        pass # Wikidata-Editing
+
+    forum=root.findtext("result/project/links/link[category='Forums']/url")
+    if forum is not None:
+        print(forum)
+        pass # Wikidata-Editing
+
     print("")
 
