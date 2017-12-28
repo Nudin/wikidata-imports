@@ -1,21 +1,50 @@
 #!/bin/env python3
-import requests
-from packaging.version import parse
-import urllib.parse
-from itertools import zip_longest
 import re
+import requests
+import sys
+import urllib.parse
+from datetime import datetime
+from itertools import zip_longest
+from packaging.version import parse
 
-# starttext = "List of outdated packages"
-# missing = "%s has no package in Arch!"
-# outofdate = "%s (%s) is out of date. Arch: %s – WD: %s"
-# endtext = ""
-starttext = """{|
-! Package !! Version in Arch !! Version in Wikidata"""
-missing = """|-
-| [[%s|%s]] || Package does not exist!"""
-outofdate = """|-
-| [[%s|%s]] || %s || %s"""
-endtext = "|}"
+if len(sys.argv) == 1:
+    mode = "plain"
+else:
+    mode = sys.argv[1]
+
+if mode == "plain":
+    starttext = "List of outdated packages"
+    missing = "%s has no package in Arch!"
+    outofdate = "%s (%s) is out of date. Arch: %s – WD: %s"
+    endtext = "Date: %s"
+elif mode == "wiki":
+    starttext = """{|
+    ! Package !! Version in Arch !! Version in Wikidata"""
+    missing = """|-
+    | [[%s|%s]] || Package does not exist!"""
+    outofdate = """|-
+    | [[%s|%s]] || %s || %s"""
+    endtext = "|}\n\Date: %s"
+elif mode == "html":
+    starttext = """<!DOCTYPE html><html lang='en'>
+    <style>table { border-collapse: collapse; }
+    table, th, td { border: 1px solid black; padding: 0.3em; }</style>
+    <body>
+    <h1>Probably outdated Software-items on Wikidata</h1>
+    <p>List of software where the newest version-number on Wikidata is older
+    that the version available in the Arch-Linux-Repositories. "Package does
+    not exist!" means, that there is a Arch-package-name set in Wikidata but no
+    such Package in the Arch-Repos!</p>
+    <table>
+     <tr><th>Paket</th><th>Version in Arch</th><th>Version in Wikidata</th></tr>"""
+    missing = """<tr>
+    <td><a href='https://www.wikidata.org/wiki/%s'>%s</td><td>Does not exist</td></tr>"""
+    outofdate = """<tr>
+    <td><a href='https://www.wikidata.org/wiki/%s'>%s</td>
+    <td>%s</td>
+    <td>%s</td>
+    </tr>"""
+    endtext = "</table><br>Date: %s<body></html>"
 
 archurl = 'https://www.archlinux.org/packages/search/json/?name={}'
 wdqurl = 'https://query.wikidata.org/sparql?format=json&query='
@@ -77,4 +106,4 @@ outdatedlist = sorted(outdatedlist, key=mycomp)
 
 for software in outdatedlist:
         print(outofdate % (software[0], software[1], software[2], software[3]))
-print(endtext)
+print(endtext % datetime.now())
