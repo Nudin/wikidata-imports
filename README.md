@@ -9,6 +9,8 @@ to add them to Wikidata – automatically or half-automatically.
       wikidata-items with archlinux-packages.
  - github
     - Add links to Github-repositories to wikidata-items
+ - changlogs
+    - Import Changlogs of various software projects to wikidata
 
 # How to use
 To run the scripts marked with (pywikibot) you need to have pywikibot installed
