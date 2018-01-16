@@ -16,6 +16,15 @@ if mode == "plain":
     starttext = "List of outdated packages"
     missing = "%s has no package in Arch! (%s)"
     outofdate = "%s – %s (%s) is out of date. Arch: %s – WD: %s"
+    statistics = """==Statistics==
+    Items for software running on Linux: %i
+    Items with Arch-Label: %i
+    Items with Arch-Label & a version number: %i
+    Items with matching version number: %i
+    Items with outdated version number: %i
+    Items with version number newer than Arch: %i
+    """
+    endtable = ""
     endtext = "Date: %s"
 elif mode == "wiki":
     starttext = """{|
@@ -24,7 +33,16 @@ elif mode == "wiki":
     | [[%s|%s]] || Package does not exist! || %s"""
     outofdate = """|-
     | (%s) [[%s|%s]] || %s || %s"""
-    endtext = "|}\n\Date: %s"
+    statistics = """==Statistics==
+    Items for software running on Linux: %i
+    Items with Arch-Label: %i
+    Items with Arch-Label & a version number: %i
+    Items with matching version number: %i
+    Items with outdated version number: %i
+    Items with version number newer than Arch: %i
+    """
+    endtable = "|}"
+    endtext = "\n\Date: %s"
 elif mode == "html":
     starttext = """<!DOCTYPE html><html lang='en'>
     <style>
@@ -50,7 +68,19 @@ elif mode == "html":
     <td>%s</td>
     <td>%s</td>
     </tr>"""
-    endtext = "</table><br>Date: %s<body></html>"
+    statistics = """<h2>Statistics</h2>
+    <ul>
+    <li>Items Software running on Linux: %i</li>
+    <li>Items with Arch-Label: %i</li>
+    <li>Items with Arch-Label & a version number: %i
+        (<a href="http://tinyurl.com/y9mz76w9">List of items without.</a>)</li>
+    <li>Items with matching version number: %i</li>
+    <li>Items with outdated version number: %i</li>
+    <li>Items with version number newer than Arch: %i</li>
+    </ul>
+    """
+    endtable = "</table>"
+    endtext = "<br>Date: %s<body></html>"
 
 archurl = 'https://www.archlinux.org/packages/search/json/?name={}'
 wdqurl = 'https://query.wikidata.org/sparql?format=json&query='
@@ -63,12 +93,39 @@ WHERE
   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
 }
 """
+
+queryNumberLinuxItems = """
+SELECT (COUNT(DISTINCT ?item) AS ?count) WHERE {
+  {?item wdt:P306 wd:Q388. } UNION {
+  ?item wdt:P306 wd:Q3251801. } UNION {
+  ?item wdt:P306 wd:Q14579. }
+}
+"""
+
+queryNumberArchLinks = """
+SELECT (COUNT(DISTINCT ?item) AS ?count)
+WHERE
+{
+  ?item wdt:P3454 ?arch.
+}
+"""
+
+queryNumberVersions = """
+SELECT (COUNT(DISTINCT ?item) AS ?count)
+WHERE
+{
+  ?item wdt:P3454 ?arch.
+  ?item wdt:P348 ?vers.
+}
+"""
+
 # blacklist of items not to check
 blacklist = ['Q687332', 'Q131344', 'Q295495', 'Q1151159']
 # greylist of items where to only check main version
 greylist = ['Q2002007', 'Q286124', 'Q41242', 'Q131382']
 
 
+# Run a query against a web-api
 def runquery(url):
     r = requests.get(url)
     if r.status_code == 200:
@@ -77,18 +134,31 @@ def runquery(url):
         return None
 
 
+# Run a Spaql-Query
+def runSPARQLquery(query):
+    return runquery(wdqurl + urllib.parse.quote_plus(query))['bindings']
+
+
 # We use this function to sort the list according to the
 # "size" of the change of the version.
-def mycomp(l):
+def versiondelta(l):
     old = re.sub("[^0-9.]", "", str(l[3])).split('.')
     new = re.sub("[^0-9.]", "", str(l[2])).split('.')
     return [int(o)-int(n) for o, n in zip_longest(old, new, fillvalue=0)]
 
 
-wdlist = runquery(wdqurl + urllib.parse.quote_plus(query))
+# get statistics
+numberArchLinks = int(runSPARQLquery(queryNumberArchLinks)[0]['count']['value'])
+numberVersion = int(runSPARQLquery(queryNumberVersions)[0]['count']['value'])
+numberLinuxItems = int(runSPARQLquery(queryNumberLinuxItems)[0]['count']['value'])
+countOutdated = 0
+countNewer = 0
+
+# Get newest version numbers from Wikidata
+wdlist = runSPARQLquery(query)
 softwarelist = {}
 qidlist = {}
-for software in wdlist['bindings']:
+for software in wdlist:
     qid = software['item']['value'][31:]
     if qid in blacklist:
         continue
@@ -103,6 +173,7 @@ for software in wdlist['bindings']:
         softwarelist[name] = wdversion
         qidlist[name] = qid
 
+# Check every software against the Arch repos
 print(starttext)
 outdatedlist = []
 for software in softwarelist:
@@ -112,26 +183,36 @@ for software in softwarelist:
     if searchres == []:
         print(missing % (qid, software, wdversion))
     else:
+        archversion_str = searchres[0]["pkgver"].split('+')[0]
         if qid in greylist:
-            archversion = parse(searchres[0]["pkgver"].split('+')[0].split('.')[0])
-        else:
-            archversion = parse(searchres[0]["pkgver"].split('+')[0])
-        # Skip realease-candidates, betas, etc
+            archversion_str = archversion_str.split('.')[0]
+        archversion = parse(archversion_str)
+        # Skip release-candidates, betas, etc
         if archversion.is_prerelease:
             continue
         if archversion > wdversion:
             outdatedlist.append([qid, software, archversion, wdversion])
+            countOutdated += 1
+        elif archversion < wdversion:
+            countNewer += 1
+
 
 # Sort (bigger steps in Versionsnummer fist)
-outdatedlist = sorted(outdatedlist, key=mycomp)
+outdatedlist = sorted(outdatedlist, key=versiondelta)
 
+# print out table of outdated versions
 for software in outdatedlist:
-    if mycomp(software)[0] != 0:
+    delta = versiondelta(software)
+    if delta[0] != 0:
         lvl = "major"
-    elif mycomp(software)[1] != 0:
+    elif delta[1] != 0:
         lvl = "minor"
     else:
         lvl = "bug"
-
     print(outofdate % (lvl, software[0], software[1], software[2], software[3]))
+
+print(endtable)
+matchingversions = numberVersion - countOutdated - countNewer
+print(statistics % (numberLinuxItems, numberArchLinks, numberVersion,
+                    matchingversions, countOutdated, countNewer))
 print(endtext % datetime.now())
