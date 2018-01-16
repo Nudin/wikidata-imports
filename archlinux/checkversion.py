@@ -177,7 +177,7 @@ for software in wdlist:
 print(starttext)
 outdatedlist = []
 for software in softwarelist:
-    searchres = runquery(archurl.format(software))
+    searchres = runquery(archurl.format(urllib.parse.quote_plus(software)))
     qid = qidlist[software]
     wdversion = softwarelist[software]
     if searchres == []:
