@@ -8,6 +8,7 @@ from itertools import zip_longest
 from packaging.version import parse
 from tqdm import tqdm
 from joblib import Memory
+import os
 
 
 if len(sys.argv) == 1:
@@ -28,7 +29,7 @@ if mode == "plain":
     Items with version number newer than Arch: %i
     """
     endtable = ""
-    endtext = "Date: %s"
+    endtext = "Date: %s\nArch-Date: %s"
 elif mode == "wiki":
     starttext = """{|
     ! Package !! Version in Arch !! Version in Wikidata"""
@@ -45,7 +46,7 @@ elif mode == "wiki":
     Items with version number newer than Arch: %i
     """
     endtable = "|}"
-    endtext = "\n\Date: %s"
+    endtext = "\n\Date: %s\nArch-Date: %s"
 elif mode == "html":
     starttext = """<!DOCTYPE html><html lang='en'>
     <style>
@@ -85,7 +86,7 @@ elif mode == "html":
     </ul>
     """
     endtable = "</table>"
-    endtext = "<br>Date: %s<body></html>"
+    endtext = "<br>Date: %s<br>Date of arch-db: %s<body></html>"
 
 archurl = 'https://www.archlinux.org/packages/search/json/?name={}'
 wdqurl = 'https://query.wikidata.org/sparql?format=json&query='
@@ -140,11 +141,22 @@ WHERE
 """
 
 # blacklist of items not to check
-blacklist = ['Q131344', 'Q295495']  # 'Q687332', 'Q1151159','Q28877432', 'Q2527121', 'Q3200238']
+blacklist = ['Q131344', 'Q295495', 'Q1151159']  # 'Q687332','Q28877432', 'Q2527121', 'Q3200238']
 # greylist of items where to only check main version
-greylist = ['Q2002007', 'Q286124', 'Q48524', 'Q401995']  # 'Q41242', 'Q131382', 'Q1103066', 'Q58072']
+greylist = ['Q2002007', 'Q286124', 'Q48524', 'Q401995', 'Q7439308', 'Q3353120', 'Q204377']  # 'Q41242', 'Q131382', 'Q1103066', 'Q58072']
+directory = "archcache"
 
-memory = Memory(cachedir="archcache", verbose=0)
+if not os.path.exists(directory):
+    os.makedirs(directory)
+timefile = os.path.join(directory, "timestamp")
+timestamp=datetime.now()
+if not os.path.exists(timefile):
+    with open(timefile, 'w') as f:
+        f.write(str(timestamp))
+else:
+    with open(timefile) as f:
+        timestamp = f.read()
+memory = Memory(cachedir=directory, verbose=0)
 
 
 # Run a query against a web-api
@@ -261,5 +273,5 @@ print(endtable)
 matchingversions = numberVersion - countOutdated - countNewer
 print(statistics % (numberLinuxItems, numberArchLinks, numberVersion,
                     matchingversions, countOutdated, countNewer))
-print(endtext % datetime.now())
+print(endtext % (datetime.now(), timestamp) )
 
