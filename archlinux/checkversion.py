@@ -6,6 +6,9 @@ import urllib.parse
 from datetime import datetime
 from itertools import zip_longest
 from packaging.version import parse
+from tqdm import tqdm
+from joblib import Memory
+
 
 if len(sys.argv) == 1:
     mode = "plain"
@@ -15,7 +18,7 @@ else:
 if mode == "plain":
     starttext = "List of outdated packages"
     missing = "%s has no package in Arch! (%s)"
-    outofdate = "%s – %s (%s) is out of date. Arch: %s – WD: %s"
+    outofdate = "%s – %s (%s) is out of date. Arch: %s – WD: %s (%s)"
     statistics = """==Statistics==
     Items for software running on Linux: %i
     Items with Arch-Label: %i
@@ -58,13 +61,15 @@ elif mode == "html":
     not exist!" means, that there is a Arch-package-name set in Wikidata but no
     such Package in the Arch-Repos!</p>
     <table>
-     <tr><th>Paket</th><th>Version in Arch</th><th>Version in Wikidata</th></tr>"""
+     <tr><th>Paket</th><th>Version in Arch</th><th>Version in Wikidata</th>
+         <th>Newest (Beta) on Wikidata</th></tr>"""
     missing = """<tr>
     <td><a href='https://www.wikidata.org/wiki/%s'>%s</td>
     <td>Package does not exist!</td>
     <td>%s</td></tr>"""
     outofdate = """<tr class='%s'>
     <td><a href='https://www.wikidata.org/wiki/%s'>%s</td>
+    <td>%s</td>
     <td>%s</td>
     <td>%s</td>
     </tr>"""
@@ -90,6 +95,21 @@ WHERE
 {
   ?item wdt:P3454 ?archlabel.
   ?item wdt:P348 ?vers.
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+}
+"""
+
+betaquery = """
+SELECT ?item ?itemLabel ?archlabel ?vers
+WHERE
+{
+  ?item wdt:P3454 ?archlabel.
+  ?item p:P348 ?v.
+  ?v ps:P348 ?vers.
+  ?v pq:P548 ?q.
+  FILTER NOT EXISTS {
+      ?v pq:P548 wd:Q2804309.
+  }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
 }
 """
@@ -120,10 +140,11 @@ WHERE
 """
 
 # blacklist of items not to check
-blacklist = ['Q687332', 'Q131344', 'Q295495', 'Q1151159',
-             'Q28877432', 'Q2527121', 'Q3200238']
+blacklist = ['Q131344', 'Q295495']  # 'Q687332', 'Q1151159','Q28877432', 'Q2527121', 'Q3200238']
 # greylist of items where to only check main version
-greylist = ['Q2002007', 'Q286124', 'Q41242', 'Q131382', 'Q1103066', 'Q58072', 'Q48524']
+greylist = ['Q2002007', 'Q286124', 'Q48524', 'Q401995']  # 'Q41242', 'Q131382', 'Q1103066', 'Q58072']
+
+memory = Memory(cachedir="archcache", verbose=0)
 
 
 # Run a query against a web-api
@@ -138,6 +159,14 @@ def runquery(url):
 # Run a Spaql-Query
 def runSPARQLquery(query):
     return runquery(wdqurl + urllib.parse.quote_plus(query))['bindings']
+
+
+@memory.cache
+def runarchquery(software):
+    searchres = runquery(archurl.format(urllib.parse.quote_plus(software)))
+    if searchres == []:
+        return None
+    return searchres[0]["pkgver"].split('+')[0]
 
 
 # We use this function to sort the list according to the
@@ -164,10 +193,10 @@ for software in wdlist:
     if qid in blacklist:
         continue
     name = software['archlabel']['value']
-    # name = name.replace('-', '.')
     wdversionstr = software['vers']['value'].replace('-', '.')
     if qid in greylist:
-        wdversionstr = ' '.join(wdversionstr.split('.')[0:-1])
+        if len(wdversionstr.split('.')) > 1:
+            wdversionstr = ' '.join(wdversionstr.split('.')[0:-1])
     wdversion = parse(wdversionstr)
     if name in softwarelist:
         softwarelist[name] = max(wdversion, softwarelist[name])
@@ -175,26 +204,40 @@ for software in wdlist:
         softwarelist[name] = wdversion
         qidlist[name] = qid
 
+wdlist_beta = runSPARQLquery(betaquery)
+softwarelist_beta = {}
+for software in wdlist_beta:
+    qid = software['item']['value'][31:]
+    if qid in blacklist:
+        continue
+    name = software['archlabel']['value']
+    wdversionstr = software['vers']['value'].replace('-', '.')
+    wdversion = parse(wdversionstr)
+    if name in softwarelist_beta:
+        softwarelist_beta[name] = max(wdversion, softwarelist_beta[name])
+    else:
+        softwarelist_beta[name] = wdversion
 
 # Check every software against the Arch repos
 print(starttext)
 outdatedlist = []
-for software in softwarelist:
-    searchres = runquery(archurl.format(urllib.parse.quote_plus(software)))
+for software in tqdm(softwarelist):
+    archversion_str = runarchquery(software)
     qid = qidlist[software]
     wdversion = softwarelist[software]
-    if searchres == []:
+    betaversion = softwarelist_beta.get(software, '')
+    if archversion_str is None:
         print(missing % (qid, software, wdversion))
     else:
-        archversion_str = searchres[0]["pkgver"].split('+')[0]
         if qid in greylist:
-            archversion_str = archversion_str.split('.')[0]
+            if len(wdversionstr.split('.')) > 1:
+                archversion_str = ' '.join(archversion_str.split('.')[0:-1])
         archversion = parse(archversion_str)
         # Skip release-candidates, betas, etc
         if archversion.is_prerelease:
             continue
-        if archversion > wdversion:
-            outdatedlist.append([qid, software, archversion, wdversion])
+        if archversion > wdversion and archversion != betaversion:
+            outdatedlist.append([qid, software, archversion, wdversion, betaversion])
             countOutdated += 1
         elif archversion < wdversion:
             countNewer += 1
@@ -212,10 +255,11 @@ for software in outdatedlist:
         lvl = "minor"
     else:
         lvl = "bug"
-    print(outofdate % (lvl, software[0], software[1], software[2], software[3]))
+    print(outofdate % (lvl, software[0], software[1], software[2], software[3], software[4]))
 
 print(endtable)
 matchingversions = numberVersion - countOutdated - countNewer
 print(statistics % (numberLinuxItems, numberArchLinks, numberVersion,
                     matchingversions, countOutdated, countNewer))
 print(endtext % datetime.now())
+
