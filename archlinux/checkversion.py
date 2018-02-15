@@ -120,9 +120,10 @@ WHERE
 """
 
 # blacklist of items not to check
-blacklist = ['Q687332', 'Q131344', 'Q295495', 'Q1151159']
+blacklist = ['Q687332', 'Q131344', 'Q295495', 'Q1151159',
+             'Q28877432', 'Q2527121', 'Q3200238']
 # greylist of items where to only check main version
-greylist = ['Q2002007', 'Q286124', 'Q41242', 'Q131382']
+greylist = ['Q2002007', 'Q286124', 'Q41242', 'Q131382', 'Q1103066', 'Q58072', 'Q48524']
 
 
 # Run a query against a web-api
@@ -163,15 +164,17 @@ for software in wdlist:
     if qid in blacklist:
         continue
     name = software['archlabel']['value']
+    # name = name.replace('-', '.')
+    wdversionstr = software['vers']['value'].replace('-', '.')
     if qid in greylist:
-        wdversion = parse(software['vers']['value'].split('.')[0])
-    else:
-        wdversion = parse(software['vers']['value'])
+        wdversionstr = ' '.join(wdversionstr.split('.')[0:-1])
+    wdversion = parse(wdversionstr)
     if name in softwarelist:
         softwarelist[name] = max(wdversion, softwarelist[name])
     else:
         softwarelist[name] = wdversion
         qidlist[name] = qid
+
 
 # Check every software against the Arch repos
 print(starttext)
@@ -205,7 +208,7 @@ for software in outdatedlist:
     delta = versiondelta(software)
     if delta[0] != 0:
         lvl = "major"
-    elif delta[1] != 0:
+    elif len(delta) > 1 and delta[1] != 0:
         lvl = "minor"
     else:
         lvl = "bug"
