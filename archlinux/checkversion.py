@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
+import os
 import re
 import requests
+import subprocess
 import sys
 import urllib.parse
 from datetime import datetime
+from glob import glob
 from itertools import zip_longest
+from joblib import Memory
 from packaging.version import parse
 from tqdm import tqdm
-from joblib import Memory
-import os
 
+abspath = os.path.abspath(__file__)
+dname = os.path.dirname(abspath)
+os.chdir(dname)
 
 if len(sys.argv) == 1:
     mode = "plain"
@@ -19,7 +24,7 @@ else:
 if mode == "plain":
     starttext = "List of outdated packages"
     missing = "%s has no package in Arch! (%s)"
-    outofdate = "%s – %s (%s) is out of date. Arch: %s – WD: %s (%s)"
+    outofdate = "%s – %s (%s) is out of date. Arch: %s – WD: %s (%s) (%s)"
     statistics = """==Statistics==
     Items for software running on Linux: %i
     Items with Arch-Label: %i
@@ -29,14 +34,14 @@ if mode == "plain":
     Items with version number newer than Arch: %i
     """
     endtable = ""
-    endtext = "Date: %s\nArch-Date: %s"
+    endtext = "Date: %s\nData from arch repos cached for up to %i minutes\nCachemisses: %i"
 elif mode == "wiki":
     starttext = """{|
-    ! Package !! Version in Arch !! Version in Wikidata"""
+    ! Package !! Version in Arch !! Version in Wikidata !! Github"""
     missing = """|-
     | [[%s|%s]] || Package does not exist! || %s"""
     outofdate = """|-
-    | (%s) [[%s|%s]] || %s || %s"""
+    | (%s) [[%s|%s]] || %s || %s || %s """
     statistics = """==Statistics==
     Items for software running on Linux: %i
     Items with Arch-Label: %i
@@ -46,7 +51,7 @@ elif mode == "wiki":
     Items with version number newer than Arch: %i
     """
     endtable = "|}"
-    endtext = "\n\Date: %s\nArch-Date: %s"
+    endtext = "\n\Date: %s\nData from arch repos cached for up to %i minutes\nCachemisses: %i"
 elif mode == "html":
     starttext = """<!DOCTYPE html><html lang='en'>
     <style>
@@ -63,13 +68,14 @@ elif mode == "html":
     such Package in the Arch-Repos!</p>
     <table>
      <tr><th>Paket</th><th>Version in Arch</th><th>Version in Wikidata</th>
-         <th>Newest (Beta) on Wikidata</th></tr>"""
+         <th>Newest (Beta) on Wikidata</th><th>github-repo</th></tr>"""
     missing = """<tr>
     <td><a href='https://www.wikidata.org/wiki/%s'>%s</td>
     <td>Package does not exist!</td>
     <td>%s</td></tr>"""
     outofdate = """<tr class='%s'>
     <td><a href='https://www.wikidata.org/wiki/%s'>%s</td>
+    <td>%s</td>
     <td>%s</td>
     <td>%s</td>
     <td>%s</td>
@@ -84,11 +90,21 @@ elif mode == "html":
     <li>Items with outdated version number: %i</li>
     <li>Items with version number newer than Arch: %i</li>
     </ul>
+    <p><a href="http://tinyurl.com/y7d2ejp7">
+    Items with multiple versions with identical Rank</a></p>
     """
     endtable = "</table>"
-    endtext = "<br>Date: %s<br>Date of arch-db: %s<body></html>"
+    endtext = """<br>Date: %s<br>
+    Data from arch repos cached for up to %i minutes<br>
+    Cachemisses: %i
+    <body></html>"""
 
 archurl = 'https://www.archlinux.org/packages/search/json/?name={}'
+# List of repos in which we want to search
+repos = ['Community', 'Community-Testing', 'Core', 'Extra',
+         'Multilib', 'Multilib-Testing', 'Testing']
+for repo in repos:
+    archurl += '&repo={}'.format(repo)
 wdqurl = 'https://query.wikidata.org/sparql?format=json&query='
 query = """
 SELECT ?item ?itemLabel ?archlabel ?vers
@@ -140,22 +156,40 @@ WHERE
 }
 """
 
-# blacklist of items not to check
-blacklist = ['Q131344', 'Q295495', 'Q1151159']  # 'Q687332','Q28877432', 'Q2527121', 'Q3200238']
-# greylist of items where to only check main version
-greylist = ['Q2002007', 'Q286124', 'Q48524', 'Q401995', 'Q7439308', 'Q3353120', 'Q204377']  # 'Q41242', 'Q131382', 'Q1103066', 'Q58072']
-directory = "archcache"
+querygithub = """
+  SELECT ?item ?github where {
+  ?item wdt:P1324 ?github.
+  FILTER contains( STR(?github), "github")
+}
+"""
 
+# blacklist of items not to check
+blacklist = ['Q131344', 'Q295495', 'Q1151159', 'Q1165933', 'Q214743', 'Q1050420']
+# greylist of items where to only check main version
+greylist = ['Q2002007', 'Q286124', 'Q48524', 'Q401995', 'Q7439308', 'Q3353120',
+            'Q204377', 'Q4779325', 'Q41242']
+
+
+# Set up cache so we don't query the arch database every time
+# delete cached values if they are older than a certain time
+cachetime = 180
+cachemisscounter = 0
+directory = "archcache"
 if not os.path.exists(directory):
     os.makedirs(directory)
-timefile = os.path.join(directory, "timestamp")
-timestamp=datetime.now()
-if not os.path.exists(timefile):
-    with open(timefile, 'w') as f:
-        f.write(str(timestamp))
-else:
-    with open(timefile) as f:
-        timestamp = f.read()
+subprocess.call(["touch"] +
+                glob(directory) +
+                glob(directory + "/joblib/") +
+                glob(directory + "/joblib/*") +
+                glob(directory + "/joblib/*/*/")
+                )
+subprocess.call(["find",
+                 directory,
+                 "-type", "d",
+                 "-mmin", "+"+str(cachetime),
+                 "-exec", "rm -r {}", ";"
+                 ])
+
 memory = Memory(cachedir=directory, verbose=0)
 
 
@@ -175,6 +209,8 @@ def runSPARQLquery(query):
 
 @memory.cache
 def runarchquery(software):
+    global cachemisscounter
+    cachemisscounter += 1
     searchres = runquery(archurl.format(urllib.parse.quote_plus(software)))
     if searchres == []:
         return None
@@ -205,7 +241,7 @@ for software in wdlist:
     if qid in blacklist:
         continue
     name = software['archlabel']['value']
-    wdversionstr = software['vers']['value'].replace('-', '.')
+    wdversionstr = software['vers']['value'].replace('-', '.').replace(' patch ', '.')
     if qid in greylist:
         if len(wdversionstr.split('.')) > 1:
             wdversionstr = ' '.join(wdversionstr.split('.')[0:-1])
@@ -229,6 +265,13 @@ for software in wdlist_beta:
         softwarelist_beta[name] = max(wdversion, softwarelist_beta[name])
     else:
         softwarelist_beta[name] = wdversion
+
+wdgithublist = runSPARQLquery(querygithub)
+githublist = {}
+for software in wdgithublist:
+    qid = software['item']['value'][31:]
+    github = software['github']['value']
+    githublist[qid] = github
 
 # Check every software against the Arch repos
 print(starttext)
@@ -267,11 +310,11 @@ for software in outdatedlist:
         lvl = "minor"
     else:
         lvl = "bug"
-    print(outofdate % (lvl, software[0], software[1], software[2], software[3], software[4]))
+    print(outofdate % (lvl, software[0], software[1], software[2],
+          software[3], software[4], githublist.get(software[0], '')))
 
 print(endtable)
 matchingversions = numberVersion - countOutdated - countNewer
 print(statistics % (numberLinuxItems, numberArchLinks, numberVersion,
                     matchingversions, countOutdated, countNewer))
-print(endtext % (datetime.now(), timestamp) )
-
+print(endtext % (datetime.now(), cachetime, cachemisscounter))
