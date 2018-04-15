@@ -1,5 +1,11 @@
-Q1188957,libvirt,%Y-%M-%d,https://libvirt.org/news.html,libvirt Releases
-Q69952,pacman,%Y-%M-%d,https://www.archlinux.org/pacman/,Pacman Home Page
-Q683003,qcad,%Y/%M/%d,http://www.qcad.org/en/changelog,QCAD Changelog
-Q8038,gimp,%Y-%M-%d,https://www.gimp.org/about/history.html,GIMP History
-Q71380,pidgin,%M/d/%Y,https://bitbucket.org/pidgin/www/src/tip/htdocs/ChangeLog,ChangeLog
+Q6667482,lvm2,%d.%B.%Y,ftp://sources.redhat.com/pub/lvm2/WHATS_NEW,WHATS_NEW
+Q581256,clisp,%Y-%m-%d,https://sourceforge.net/p/clisp/clisp/ci/default/tree/src/NEWS,NEWS
+Q28451996,feh,%Y-%m-%d,https://feh.finalrewind.org/archive/,Feh – archive
+Q1188957,libvirt,%Y-%m-%d,https://libvirt.org/news.html,libvirt Releases
+Q69952,pacman,%Y-%m-%d,https://www.archlinux.org/pacman/,Pacman Home Page
+Q683003,qcad,%Y/%m/%d,http://www.qcad.org/en/changelog,QCAD Changelog
+Q8038,gimp,%Y-%m-%d,https://www.gimp.org/about/history.html,GIMP History
+Q71380,pidgin,%m/%d/%Y,https://bitbucket.org/pidgin/www/src/tip/htdocs/ChangeLog,ChangeLog
+Q2000469,weechat,%Y-%m-%d,https://weechat.org/files/changelog/ChangeLog-stable.html,WeeChat ChangeLog
+Q47526254,sqlitebrowser,%Y-%m-%d,http://sqlitebrowser.org/,DB Browser for SQLite
+Q319417,sqlite,%Y-%m-%d,https://sqlite.org/chronology.html,History Of SQLite Releases
