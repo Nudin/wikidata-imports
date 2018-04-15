@@ -113,7 +113,7 @@ WHERE
   ?item wdt:P3454 ?archlabel.
   ?item wdt:P348 ?vers.
   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
-}
+} order by ?item
 """
 
 betaquery = """
@@ -128,7 +128,7 @@ WHERE
       ?v pq:P548 wd:Q2804309.
   }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
-}
+} order by ?item
 """
 
 queryNumberLinuxItems = """
@@ -174,7 +174,7 @@ greylist = ['Q2002007', 'Q286124', 'Q48524', 'Q401995', 'Q7439308', 'Q3353120',
 # delete cached values if they are older than a certain time
 cachetime = 180
 cachemisscounter = 0
-directory = "archcache"
+directory = dname + "/archcache"
 if not os.path.exists(directory):
     os.makedirs(directory)
 subprocess.call(["touch"] +
@@ -183,12 +183,12 @@ subprocess.call(["touch"] +
                 glob(directory + "/joblib/*") +
                 glob(directory + "/joblib/*/*/")
                 )
-subprocess.call(["find",
+subprocess.Popen(("find",
                  directory,
                  "-type", "d",
                  "-mmin", "+"+str(cachetime),
-                 "-exec", "rm -r {}", ";"
-                 ])
+                 '-exec', 'rm', '-r', '{}', ';'
+                 )).wait()
 
 memory = Memory(cachedir=directory, verbose=0)
 

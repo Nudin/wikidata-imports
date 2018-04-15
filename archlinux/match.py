@@ -15,12 +15,12 @@ WHERE
   # Has a website
   ?item wdt:P856 ?website.
 
-  ?item wdt:P3442|wdt:P3473|wdt:P3463 ?debian.
+  #?item wdt:P3442|wdt:P3473|wdt:P3463 ?debian.
 
-  # ?item wdt:P306 ?linux.
-  # VALUES(?linux) {
-  #  (wd:Q388)(wd:Q174666)(wd:Q3251801)(wd:Q14656)(wd:Q11368)
-  # }
+  ?item wdt:P306 ?linux.
+  VALUES(?linux) {
+   (wd:Q388)(wd:Q174666)(wd:Q3251801)(wd:Q14656)(wd:Q11368)
+  }
 
   # ?item p:P31/ps:P31/wdt:P279* wd:Q7397.
   # ?item wdt:P275 ?licens.
