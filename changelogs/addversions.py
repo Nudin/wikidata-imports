@@ -4,6 +4,7 @@ import datetime
 import csv
 import sys
 import signal
+import re
 
 site = pywikibot.Site("wikidata", "wikidata")
 repo = site.data_repository()
@@ -67,10 +68,13 @@ with open('conf.csv', newline='') as f:
                 if version in map(lambda x: x.getTarget(), item.claims['P348']):
                     continue
             date = datetime.datetime.strptime(datestr, dateformat)
+            assert(date.date() <= today)
+            assert(date.date() > datetime.date(1990, 1, 1))
             print("Adding version %s (date: %s)" % (version, date))
 
             claim = pywikibot.Claim(repo, 'P348', datatype='string')
             claim.setTarget(version)
+            assert(re.fullmatch(r'^\d+(\.\d+)*$', version))
             item.addClaim(claim, summary=u'Adding version-number')
 
             qualifier = pywikibot.Claim(repo, 'P577')
