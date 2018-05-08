@@ -5,6 +5,7 @@ import csv
 import sys
 import signal
 import re
+import hashlib
 
 site = pywikibot.Site("wikidata", "wikidata")
 repo = site.data_repository()
@@ -21,6 +22,30 @@ def signal_handler(signal, frame):
     doexit = True
 
 
+def md5(fname):
+    hash_md5 = hashlib.md5()
+    with open(fname, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
+
+def check_md5file(fname):
+    md5fname = fname + '.md5'
+    md5sum = md5(fname)
+    try:
+        with open(md5fname, "r+") as f:
+            if f.read() == md5sum:
+                return True
+            else:
+                f.seek(0)
+                f.write(md5sum)
+    except FileNotFoundError:
+        with open(md5fname, "w") as f:
+            f.write(md5sum)
+    return False
+
+
 signal.signal(signal.SIGINT, signal_handler)
 
 with open('conf.csv', newline='') as f:
@@ -34,6 +59,9 @@ with open('conf.csv', newline='') as f:
         if doexit:
             break
         if selected is not None and filename != selected:
+            continue
+        if check_md5file(filename):
+            print("Passing {}, due to no change".format(filename))
             continue
         print("==", qid, filename, "==")
 
