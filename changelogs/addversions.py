@@ -95,9 +95,9 @@ with open('conf.csv', newline='') as f:
             if 'P348' in item.claims:
                 if version in map(lambda x: x.getTarget(), item.claims['P348']):
                     continue
-            date = datetime.datetime.strptime(datestr, dateformat)
-            assert(date.date() <= today)
-            assert(date.date() > datetime.date(1990, 1, 1))
+            date = datetime.datetime.strptime(datestr, dateformat).date()
+            assert(date <= today)
+            assert(date > datetime.date(1990, 1, 1))
             print("Adding version %s (date: %s)" % (version, date))
 
             claim = pywikibot.Claim(repo, 'P348', datatype='string')
@@ -110,6 +110,8 @@ with open('conf.csv', newline='') as f:
             qualifier.setTarget(pdate)
             claim.addQualifier(qualifier, summary='Adding a date of release.')
 
-            claim.addQualifier(stablev, summary='Set stable version')
+            # FIXME
+            if version[0] != 0:
+                claim.addQualifier(stablev, summary='Set stable version')
 
             claim.addSources([statedin, title, retrieved], summary='Adding source.')
