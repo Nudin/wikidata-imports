@@ -1,3 +1,7 @@
-Add version-numbers of Pidgin based on a grep'd version of the changelog.
+Add version-numbers of several free software projects based on a "grep'd"
+version of their changelog.
 
-This could/should be generalised and adapted to other softwares.
+This is still very hacky and has a lot of limitations, including:
+ - The ranks are not updated
+ - It assumes all versions except "0."-versions to be stable versions
+ - The download script is an ugly collections of ugly pipes
