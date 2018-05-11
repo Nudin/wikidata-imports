@@ -9,3 +9,7 @@ Q71380,pidgin,%m/%d/%Y,https://bitbucket.org/pidgin/www/src/tip/htdocs/ChangeLog
 Q2000469,weechat,%Y-%m-%d,https://weechat.org/files/changelog/ChangeLog-stable.html,WeeChat ChangeLog
 Q47526254,sqlitebrowser,%Y-%m-%d,http://sqlitebrowser.org/,DB Browser for SQLite
 Q319417,sqlite,%Y-%m-%d,https://sqlite.org/chronology.html,History Of SQLite Releases
+Q181820,file,%Y-%m-%d,https://github.com/file/file/blob/master/ChangeLog,ChangeLog
+Q624699,qemu,%Y-%m-%d,https://download.qemu.org/,download.qemu.org
+Q6930567,mupdf,%Y-%m-%d,https://mupdf.com/news.html,MuPDF News
+Q7725312,vagrant,%B-%d-%Y,https://raw.githubusercontent.com/hashicorp/vagrant/master/CHANGELOG.md,Vagrant Changelog

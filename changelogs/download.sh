@@ -1,45 +1,70 @@
 #!/bin/bash
 
-curl https://feh.finalrewind.org/archive/  | \
+curl -s https://feh.finalrewind.org/archive/  | \
    grep -e '<h1>' -e '<span class="date">' | \
    cut -d\> -f3 | \
    cut -d\< -f1 | \
    tr '\n' \#   | \
-   sed 's/#\?feh v/\n/g;s/#/\t/g' > feh
+   sed 's/#\?feh v/\n/g;s/#/\t/g' > feh &
 
-curl https://libvirt.org/news.html | \
+curl -s https://libvirt.org/news.html | \
    grep -o -e '[0-9.]* ([0-9-]*)'  | \
-   tr -d '[()]' > libvirt
+   tr -d '[()]' > libvirt &
 
-curl http://www.qcad.org/en/changelog | \
+curl -s http://www.qcad.org/en/changelog | \
    grep -P '<h2>.*</h2>' | \
    grep -oP '\b\d(\.\d+)+ +\(\d{4}/\d{2}/\d{2}\)' | \
-   tr -d '[()]' > qcad
+   tr -d '[()]' > qcad &
 
-curl https://pidgin.im/ChangeLog | \
+curl -s https://pidgin.im/ChangeLog | \
    grep '^version' | \
    grep -oP '\b\d(\.\d+)+ +\(\d{2}/\d{2}/\d{4}\)' | \
-   tr -d '[()]' > pidgin
+   tr -d '[()]' > pidgin &
 
-curl https://weechat.org/files/changelog/ChangeLog-stable.html | \
+curl -s https://weechat.org/files/changelog/ChangeLog-stable.html | \
    grep -o '[0-9.]\+ +([0-9-]\+)' | \
-   tr -d '[()]' > weechat
+   tr -d '[()]' > weechat &
 
 lynx --dump https://sqlite.org/chronology.html | \
    awk '/\[[0-9]+\]20[0-9-]+ *(\[[0-9]+\])?[0-9.]+/ {
 	    gsub(/\[[0-9]+\]/, "");
 	    print $2,$1
 	 }' | \
-   uniq > sqlite
+   uniq > sqlite &
 
-curl "https://sourceforge.net/p/clisp/clisp/ci/default/tree/src/NEWS?format=raw" | \
+curl -s "https://sourceforge.net/p/clisp/clisp/ci/default/tree/src/NEWS?format=raw" | \
    grep -P '^\d+(.\d+)+ \(\d{4}-\d{2}-\d{2}\)$' | \
-   tr -d '[()]' > clisp
+   tr -d '[()]' > clisp &
 
-curl ftp://sources.redhat.com/pub/lvm2/WHATS_NEW | \
+curl -s ftp://sources.redhat.com/pub/lvm2/WHATS_NEW | \
    awk -F\  '/^Version [0-9.]+ - [0-9]+\w\w \w+ [0-9]+/ {
 	 print $2" "gensub(/[a-z]{2}/, "", "g", $4)"."$5"."$6
-      }' > lvm2
+      }' > lvm2 &
+
+curl -s https://raw.githubusercontent.com/file/file/master/ChangeLog | \
+   grep -B2 '* release 5\...' | \
+   grep -o -E '^20..-..-..|release 5\...' | \
+   sed 's/release //' | \
+   paste - - | \
+   awk '{print $2,$1}' > file &
+
+curl -s https://download.qemu.org/ | \
+   grep -E 'qemu-[0-9]\.[0-9]+\.[0-9]+\.tar.xz.sig' | \
+   grep -o -E '"qemu-[0-9]\.[0-9]+\.[0-9]+\.tar.xz.sig"|20[0-9]{2}-[0-9]{2}-[0-9]{2}' | \
+   sed 's/"qemu-\(.*\).tar.xz.sig"/\1/' | \
+   paste - - > qemu &
+
+curl -s https://mupdf.com/news.html | \
+   grep -P '^MuPDF \d.\d \(20\d\d-\d\d-\d\d\)$' | \
+   tr -d '[()]' | \
+   cut -d\  -f2,3 > mupdf &
+
+curl -s https://raw.githubusercontent.com/hashicorp/vagrant/master/CHANGELOG.md | \
+   grep -P '## \d(.\d+)+ (.*)$' | \
+   sed 's/## //;s/ (/\t/;s/,\? /-/g;s/)//' > vagrant &
+
+echo "Waiting for downloads to complete…"
+wait
 
 # TODO:
 # gimp
