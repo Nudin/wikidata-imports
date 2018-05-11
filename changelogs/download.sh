@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd versionlists
+
 curl -s https://feh.finalrewind.org/archive/  | \
    grep -e '<h1>' -e '<span class="date">' | \
    cut -d\> -f3 | \

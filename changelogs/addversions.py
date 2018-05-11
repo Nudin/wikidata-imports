@@ -6,6 +6,7 @@ import sys
 import signal
 import re
 import hashlib
+from os.path import join
 
 site = pywikibot.Site("wikidata", "wikidata")
 repo = site.data_repository()
@@ -54,7 +55,7 @@ with open('conf.csv', newline='') as f:
     reader = csv.reader(f)
     for row in reader:
         qid = row[0]
-        filename = row[1]
+        filename = join("versionlists", row[1])
         dateformat = row[2]
         srcurl = row[3]
         srctitle = row[4]
