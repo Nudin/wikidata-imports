@@ -9,6 +9,8 @@ import hashlib
 
 site = pywikibot.Site("wikidata", "wikidata")
 repo = site.data_repository()
+today = datetime.date.today()
+wbtoday = pywikibot.WbTime(year=today.year, month=today.month, day=today.day)
 
 selected = None
 if len(sys.argv) > 1:
@@ -71,9 +73,7 @@ with open('conf.csv', newline='') as f:
         title = pywikibot.Claim(repo, 'P1476')
         title.setTarget(pywikibot.WbMonolingualText(srctitle, "en"))
         retrieved = pywikibot.Claim(repo, 'P813')
-        today = datetime.date.today()
-        date = pywikibot.WbTime(year=today.year, month=today.month, day=today.day)
-        retrieved.setTarget(date)
+        retrieved.setTarget(wbtoday)
 
         # Stable Version
         stablev = pywikibot.Claim(repo, 'P548')
@@ -111,7 +111,7 @@ with open('conf.csv', newline='') as f:
             claim.addQualifier(qualifier, summary='Adding a date of release.')
 
             # FIXME
-            if version[0] != 0:
+            if version[0] != '0':
                 claim.addQualifier(stablev, summary='Set stable version')
 
             claim.addSources([statedin, title, retrieved], summary='Adding source.')
