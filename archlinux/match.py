@@ -2,6 +2,7 @@
 import requests
 import urllib.parse
 import pywikibot
+import functools
 from colorama import Fore, Style
 
 exactsearch = True
@@ -18,8 +19,8 @@ SELECT DISTINCT ?item ?itemLabel ?itemDescription ?website
 WHERE
 {
   # Has a website/repo
-  ?item wdt:P856|wdt:P1324 ?website.
-  #?item wdt:P856 ?website.
+  #?item wdt:P856|wdt:P1324 ?website.
+  ?item wdt:P856 ?website.
 
 
   {
@@ -43,6 +44,7 @@ WHERE
 
 
 # Run a Query and get the results block of the returned json
+@functools.lru_cache()
 def runquery(url):
     r = requests.get(url)
     if r.status_code == 200:
@@ -100,7 +102,7 @@ wdlist = runquery(wdqurl + urllib.parse.quote_plus(query))
 softwarelist = {}
 qidlist = {}
 done = []
-blacklist = ["python", "twine", "Q1107192"]
+blacklist = ["python", "twine", "Q1107192", "Q28975307"]
 for software in wdlist['bindings']:
     print('.', end='', flush=True)
     qid = getvalue(software, 'item')[31:]
@@ -118,6 +120,7 @@ for software in wdlist['bindings']:
             continue
         pkgwebsite = normurl(searchres[0]['url'])
         pkgname = normurl(searchres[0]['pkgname'])
+        pkgdesc = searchres[0]['pkgdesc']
         match = website == pkgwebsite and name == pkgname
         print("")
         print(Style.BRIGHT + "Potential Match: ", end="")
@@ -126,7 +129,7 @@ for software in wdlist['bindings']:
         if (website != pkgwebsite):
             print(Fore.RED + pkgwebsite + Style.RESET_ALL)
         print(Style.RESET_ALL + description)
-        print(searchres[0]['pkgdesc'])
+        print(pkgdesc)
         if match or ask("Write?"):
             addPkgToItem(qid, pkgname)
             done.append(qid)
