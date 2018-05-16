@@ -163,6 +163,14 @@ querygithub = """
 }
 """
 
+
+def sint(value):
+    try:
+        return int(value)
+    except ValueError:
+        return 0
+
+
 # blacklist of items not to check
 blacklist = ['Q131344', 'Q295495', 'Q1151159', 'Q1165933', 'Q214743', 'Q1050420']
 # greylist of items where to only check main version
@@ -222,7 +230,7 @@ def runarchquery(software):
 def versiondelta(l):
     old = re.sub("[^0-9.]", "", str(l[3])).split('.')
     new = re.sub("[^0-9.]", "", str(l[2])).split('.')
-    return [int(o)-int(n) for o, n in zip_longest(old, new, fillvalue=0)]
+    return [sint(o)-sint(n) for o, n in zip_longest(old, new, fillvalue=0)]
 
 
 # get statistics
