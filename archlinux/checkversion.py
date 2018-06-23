@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 import os
 import re
-import requests
 import subprocess
 import sys
 import urllib.parse
 from datetime import datetime
 from glob import glob
 from itertools import zip_longest
+
+import requests
 from joblib import Memory
 from packaging.version import parse
 from tqdm import tqdm
@@ -51,7 +52,7 @@ elif mode == "wiki":
     Items with version number newer than Arch: %i
     """
     endtable = "|}"
-    endtext = "\n\Date: %s\nData from arch repos cached for up to %i minutes\nCachemisses: %i"
+    endtext = "\nDate: %s\nData from arch repos cached for up to %i minutes\nCachemisses: %i"
 elif mode == "html":
     starttext = """<!DOCTYPE html><html lang='en'>
     <style>
@@ -74,7 +75,7 @@ elif mode == "html":
     <td>Package does not exist!</td>
     <td>%s</td></tr>"""
     outofdate = """<tr class='%s'>
-    <td><a href='https://www.wikidata.org/wiki/%s'>%s</td>
+    <td><a href='https://www.wikidata.org/wiki/%s#P348'>%s</td>
     <td>%s</td>
     <td>%s</td>
     <td>%s</td>
@@ -85,13 +86,18 @@ elif mode == "html":
     <li>Items Software running on Linux: %i</li>
     <li>Items with Arch-Label: %i</li>
     <li>Items with Arch-Label & a version number: %i
-        (<a href="http://tinyurl.com/y9mz76w9">List of items without.</a>)</li>
     <li>Items with matching version number: %i</li>
     <li>Items with outdated version number: %i</li>
     <li>Items with version number newer than Arch: %i</li>
     </ul>
-    <p><a href="http://tinyurl.com/y7d2ejp7">
-    Items with multiple versions with identical Rank</a></p>
+    <h2>More Todo-Lists</h2>
+    <ul>
+        <li><a href="http://tinyurl.com/y7d2ejp7">
+            Items with multiple versions with identical Rank</a></li>
+        <li><a href="http://tinyurl.com/y9mz76w9">
+            List of items with arch-pkg but without version number.</a></li>
+        <li><a href="http://tinyurl.com/y7gg2s95">Repos found in sources</a></li>
+    </ul>
     """
     endtable = "</table>"
     endtext = """<br>Date: %s<br>
@@ -172,7 +178,8 @@ def sint(value):
 
 
 # blacklist of items not to check
-blacklist = ['Q131344', 'Q295495', 'Q1151159', 'Q1165933', 'Q214743', 'Q1050420']
+blacklist = ['Q131344', 'Q295495', 'Q1151159',
+             'Q1165933', 'Q214743', 'Q1050420']
 # greylist of items where to only check main version
 greylist = ['Q2002007', 'Q286124', 'Q48524', 'Q401995', 'Q7439308', 'Q3353120',
             'Q204377', 'Q4779325', 'Q41242']
@@ -192,11 +199,11 @@ subprocess.call(["touch"] +
                 glob(directory + "/joblib/*/*/")
                 )
 subprocess.Popen(("find",
-                 directory,
-                 "-type", "d",
-                 "-mmin", "+"+str(cachetime),
-                 '-exec', 'rm', '-r', '{}', ';'
-                 )).wait()
+                  directory,
+                  "-type", "d",
+                  "-mmin", "+"+str(cachetime),
+                  '-exec', 'rm', '-r', '{}', ';'
+                  )).wait()
 
 memory = Memory(cachedir=directory, verbose=0)
 
@@ -234,9 +241,11 @@ def versiondelta(l):
 
 
 # get statistics
-numberArchLinks = int(runSPARQLquery(queryNumberArchLinks)[0]['count']['value'])
+numberArchLinks = int(runSPARQLquery(
+    queryNumberArchLinks)[0]['count']['value'])
 numberVersion = int(runSPARQLquery(queryNumberVersions)[0]['count']['value'])
-numberLinuxItems = int(runSPARQLquery(queryNumberLinuxItems)[0]['count']['value'])
+numberLinuxItems = int(runSPARQLquery(
+    queryNumberLinuxItems)[0]['count']['value'])
 countOutdated = 0
 countNewer = 0
 
@@ -249,7 +258,8 @@ for software in wdlist:
     if qid in blacklist:
         continue
     name = software['archlabel']['value']
-    wdversionstr = software['vers']['value'].replace('-', '.').replace(' patch ', '.')
+    wdversionstr = software['vers']['value'].replace(
+        '-', '.').replace(' patch ', '.')
     if qid in greylist:
         if len(wdversionstr.split('.')) > 1:
             wdversionstr = ' '.join(wdversionstr.split('.')[0:-1])
@@ -300,7 +310,8 @@ for software in tqdm(softwarelist):
         if archversion.is_prerelease:
             continue
         if archversion > wdversion and archversion != betaversion:
-            outdatedlist.append([qid, software, archversion, wdversion, betaversion])
+            outdatedlist.append(
+                [qid, software, archversion, wdversion, betaversion])
             countOutdated += 1
         elif archversion < wdversion:
             countNewer += 1
@@ -319,7 +330,7 @@ for software in outdatedlist:
     else:
         lvl = "bug"
     print(outofdate % (lvl, software[0], software[1], software[2],
-          software[3], software[4], githublist.get(software[0], '')))
+                       software[3], software[4], githublist.get(software[0], '')))
 
 print(endtable)
 matchingversions = numberVersion - countOutdated - countNewer
