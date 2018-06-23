@@ -294,7 +294,11 @@ for software in wdgithublist:
 # Check every software against the Arch repos
 print(starttext)
 outdatedlist = []
-for software in tqdm(softwarelist):
+if sys.stderr.isatty():
+    softwareiter = tqdm(softwarelist)
+else:
+    softwareiter = softwarelist
+for software in softwareiter:
     archversion_str = runarchquery(software)
     qid = qidlist[software]
     wdversion = softwarelist[software]
@@ -329,8 +333,11 @@ for software in outdatedlist:
         lvl = "minor"
     else:
         lvl = "bug"
-    print(outofdate % (lvl, software[0], software[1], software[2],
-                       software[3], software[4], githublist.get(software[0], '')))
+    try:
+        print(outofdate % (lvl, software[0], software[1], software[2],
+                           software[3], software[4], githublist.get(software[0], '')))
+    except Exception:
+        pass
 
 print(endtable)
 matchingversions = numberVersion - countOutdated - countNewer
