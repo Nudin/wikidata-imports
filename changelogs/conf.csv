@@ -13,3 +13,5 @@ Q181820,file,%Y-%m-%d,https://github.com/file/file/blob/master/ChangeLog,ChangeL
 Q624699,qemu,%Y-%m-%d,https://download.qemu.org/,download.qemu.org
 Q6930567,mupdf,%Y-%m-%d,https://mupdf.com/news.html,MuPDF News
 Q7725312,vagrant,%B-%d-%Y,https://raw.githubusercontent.com/hashicorp/vagrant/master/CHANGELOG.md,Vagrant Changelog
+Q608910,links,%a-%b-%d-%Y,http://links.twibright.com/download/ChangeLog,ChangeLog
+Q1439431,fossil,%Y-%m-%d,https://www.fossil-scm.org/index.html/doc/trunk/www/changes.wiki,FossilChange Log

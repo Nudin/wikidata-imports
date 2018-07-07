@@ -1,5 +1,6 @@
 #!/bin/bash
 
+mkdir -p versionlists
 cd versionlists
 
 curl -s https://feh.finalrewind.org/archive/  | \
@@ -64,6 +65,18 @@ curl -s https://mupdf.com/news.html | \
 curl -s https://raw.githubusercontent.com/hashicorp/vagrant/master/CHANGELOG.md | \
    grep -P '## \d(.\d+)+ (.*)$' | \
    sed 's/## //;s/ (/\t/;s/,\? /-/g;s/)//' > vagrant &
+
+curl -s http://links.twibright.com/download/ChangeLog | \
+   grep -A2 '^=== RELEASE [0-9.]\+ ===$' | \
+   sed -E 's/=== RELEASE (.*) ===/\1/;s/^(\S+ \S+ +\S+) \S+ \S+[A-Z ]*([0-9]{4}).*$/\1 \2/' | \
+   grep -v '^-*$' | \
+   tr -s ' ' | tr ' ' '-' | \
+   paste - - > links &
+
+curl -s https://www.fossil-scm.org/index.html/doc/trunk/www/changes.wiki | \
+   grep -i "Changes For Version" | \
+   tr '[()]' ' ' | \
+   cut -d\  -f4,6 > fossil &
 
 echo "Waiting for downloads to complete…"
 wait

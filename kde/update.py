@@ -1,13 +1,14 @@
 #!/bin/env python3
-import requests
-import urllib.parse
-import pywikibot
 import datetime
 import re
+import urllib.parse
 
-oldversion = '18.04.0'
-newversion = '18.04.1'
-pdate = pywikibot.WbTime(2018, 5, 8)
+import pywikibot
+import requests
+
+oldversion = '18.04.1'
+newversion = '18.04.2'
+pdate = pywikibot.WbTime(2018, 6, 5)
 
 
 wdqurl = 'https://query.wikidata.org/sparql?format=json&query='
