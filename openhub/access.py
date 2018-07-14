@@ -17,40 +17,46 @@ SELECT DISTINCT ?item ?itemLabel ?openhubname WHERE
 """
 
 oh_api_key = open("mykey").readline()[:-1]
-apiurl = "https://www.openhub.net/p/{}.xml?api_key={}"
+mainapi = "p/{}.xml"
+enlistmentsapi = "p/{}/enlistments.xml"
 
 site = pywikibot.Site("wikidata", "wikidata")
-repo = site.data_repository()
+wikidata = site.data_repository()
 
 today = datetime.date.today()
 
 
 def createsource(url_str, title_str):
-    url = pywikibot.Claim(repo, "P854")
+    url = pywikibot.Claim(wikidata, "P854")
     url.setTarget(url_str)
 
-    title = pywikibot.Claim(repo, "P1476")
+    title = pywikibot.Claim(wikidata, "P1476")
     title.setTarget(pywikibot.WbMonolingualText(title_str, "en"))
 
-    retrieved = pywikibot.Claim(repo, "P813")
+    retrieved = pywikibot.Claim(wikidata, "P813")
     date = pywikibot.WbTime(year=today.year, month=today.month, day=today.day)
     retrieved.setTarget(date)
 
     return [url, title, retrieved]
 
 
-def create_andor_source(item, prop, qid, summary, source):
+def create_andor_source(item, prop, ptype, target, summary, source):
     source_summary = "Adding Open-Hub as source"
+    if ptype == "item":
+        target = pywikibot.ItemPage(wikidata, target)
+    elif ptype == "string":
+        target = target
+    else:
+        raise NotImplementedError(ptype)
     if prop not in item.claims:
-        claim = pywikibot.Claim(repo, prop)
-        target = pywikibot.ItemPage(repo, qid)
+        claim = pywikibot.Claim(wikidata, prop)
         claim.setTarget(target)
         item.addClaim(claim, summary=summary)
-        claim.addSources(source_language, summary=source_summary)
+        claim.addSources(source, summary=source_summary)
         print("Successfully added")
     elif (
         len(item.claims[prop]) == 1
-        and item.claims[prop][0].getTarget().getID() == qid
+        and item.claims[prop][0].getTarget() == target
         and len(item.claims[prop][0].sources) == 0
     ):
         claim = item.claims[prop][0]
@@ -65,6 +71,15 @@ def runquery(query):
         return r.json()["results"]["bindings"]
     else:
         return None
+
+
+def oloho_getdata(query, olohoname):
+    baseurl = "https://www.openhub.net/{}?api_key={}"
+    url = baseurl.format(query.format(olohoname), oh_api_key)
+    r = requests.get(url)
+    if r.status_code != 200:
+        raise Exception("API-Error", r.status_code)
+    return ET.fromstring(r.text)
 
 
 def get_mapping(prop):
@@ -106,28 +121,39 @@ for software in wdlist:
     softwarename = software["itemLabel"]["value"]
     openhubname = software["openhubname"]["value"]
 
-    url = apiurl.format(openhubname, oh_api_key)
-    r = requests.get(url)
-    if r.status_code != 200:
-        print("Error\n")
-        continue
+    print("\n{} – {}".format(softwarename, openhubname))
     try:
-        root = ET.fromstring(r.text)
-        openhub_url = root.find("result/project/html_url")
-    except Exception:
-        print("Error parsing xml")
+        root = oloho_getdata(mainapi, openhubname)
+        root_enlistments = oloho_getdata(enlistmentsapi, openhubname)
+        item = pywikibot.ItemPage(wikidata, qid)
+        item.get()
+    except Exception as e:
+        print(e)
         continue
 
-    print("\n{} – {}".format(softwarename, openhubname))
-    item = pywikibot.ItemPage(repo, qid)
-    item.get()
+    # openhub_url = root.find("result/project/html_url")
+
+    repos = root_enlistments.findall("result/enlistment/code_location")
+    if len(repos) == 1:
+        repo_url = repos[0].findtext("url")
+        repo_type = repos[0].findtext("type")
+        if repo_type != "git":
+            continue
+        print(repo_url, repo_type)
+        source = createsource(
+            "https://www.openhub.net/p/{}/enlistments".format(openhubname),
+            "The {} Open Source Project on Open Hub: Code Locations Page".format(
+                openhubname
+            ),
+        )
+        create_andor_source(item, "P1324", "string", repo_url, "Adding repo", source)
 
     main_lang = root.findtext("result/project/analysis/main_language_name")
     if main_lang is not None:
         if main_lang in lang_dict:
             lqid = lang_dict[main_lang]
             print(main_lang, lqid)
-            source_language = createsource(
+            source = createsource(
                 "https://www.openhub.net/p/{}/analyses/latest/languages_summary".format(
                     openhubname
                 ),
@@ -135,7 +161,7 @@ for software in wdlist:
                     openhubname
                 ),
             )
-            create_andor_source(item, "P277", lqid, "Adding language", source_language)
+            create_andor_source(item, "P277", "item", lqid, "Adding language", source)
         else:
             pass
 
@@ -144,13 +170,13 @@ for software in wdlist:
         if licensename in license_dict:
             lqid = license_dict[licensename]
             print(licensename, lqid)
-            source_license = createsource(
+            source = createsource(
                 "https://www.openhub.net/p/{}/licenses".format(openhubname),
                 "The {} Open Source Project on Open Hub: Licenses Page".format(
                     openhubname
                 ),
             )
-            create_andor_source(item, "P275", lqid, "Adding license", source_license)
+            create_andor_source(item, "P275", "item", lqid, "Adding license", source)
         else:
             f.write(licensename)
             pass
