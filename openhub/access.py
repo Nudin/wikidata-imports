@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-import datetime
-import urllib.parse
-import xml.etree.ElementTree as ET
-
 import pywikibot
-import requests
 
-wdqurl = "https://query.wikidata.org/sparql?format=json&query="
+from oloho import oloho_getdata
+from wikidata import (create_andor_source, create_claim, create_target,
+                      createsource, get_mapping, runquery, wikidata)
+
 query = """
 SELECT DISTINCT ?item ?itemLabel ?openhubname WHERE
 {
@@ -16,111 +14,19 @@ SELECT DISTINCT ?item ?itemLabel ?openhubname WHERE
 }
 """
 
-oh_api_key = open("mykey").readline()[:-1]
 mainapi = "p/{}.xml"
 enlistmentsapi = "p/{}/enlistments.xml"
 
-site = pywikibot.Site("wikidata", "wikidata")
-wikidata = site.data_repository()
-
-_today = datetime.date.today()
-today = pywikibot.WbTime(year=_today.year, month=_today.month, day=_today.day)
-openhub = pywikibot.ItemPage(wikidata, "Q124688")
-
-
-def createsource(url_str, title_str):
-    statedin = create_claim("P248", openhub)
-    url = create_claim("P854", url_str)
-    title = create_claim("P1476", create_target("entext", title_str))
-    retrieved = create_claim("P813", today)
-    return [statedin, url, title, retrieved]
-
-
-def create_claim(prop, target):
-    claim = pywikibot.Claim(wikidata, prop)
-    claim.setTarget(target)
-    return claim
-
-
-def create_target(ptype, target_str):
-    if ptype == "item":
-        target = pywikibot.ItemPage(wikidata, target_str)
-    elif ptype == "string":
-        target = target_str
-    elif ptype == "entext":
-        target = pywikibot.WbMonolingualText(target_str, "en")
-    else:
-        raise NotImplementedError(ptype)
-    return target
-
-
-def create_andor_source(item, prop, target, qualifier, source):
-    source_summary = "Adding Open-Hub as source"
-    if prop not in item.claims:
-        claim = create_claim(prop, target)
-        item.addClaim(claim)
-        if qualifier is not None:
-            claim.addQualifier(qualifier)
-        claim.addSources(source, summary=source_summary)
-        print(" Successfully added")
-    elif (
-        len(item.claims[prop]) == 1
-        and item.claims[prop][0].getTarget() == target
-        and len(item.claims[prop][0].sources) == 0
-    ):
-        claim = item.claims[prop][0]
-        claim.addSources(source, summary=source_summary)
-        print(" Successfully sourced")
-
-
-def runquery(query):
-    url = wdqurl + urllib.parse.quote_plus(query)
-    r = requests.get(url)
-    if r.status_code == 200:
-        return r.json()["results"]["bindings"]
-    else:
-        return None
-
-
-def oloho_getdata(query, olohoname):
-    baseurl = "https://www.openhub.net/{}?api_key={}"
-    url = baseurl.format(query.format(olohoname), oh_api_key)
-    r = requests.get(url)
-    if r.status_code != 200:
-        raise Exception("API-Error", r.status_code)
-    return ET.fromstring(r.text)
-
-
-def get_mapping(prop):
-    query = (
-        """
-    SELECT DISTINCT ?object ?label WHERE
-    {
-      ?item wdt:%s ?object.
-      ?object rdfs:label|skos:altLabel ?label.
-      FILTER (lang(?label) = "en")
-    }
-    """
-        % prop
-    )
-    results = runquery(query)
-    bad = []
-    mapping = {}
-    for l in results:
-        key = l["label"]["value"]
-        if key in mapping:
-            del mapping[key]
-            bad.append(key)
-        elif key not in bad:
-            mapping[key] = l["object"]["value"][31:]
-    del bad
-    return mapping
-
 
 lang_dict = get_mapping("P277")
-license_dict = get_mapping("P275")
+lang_dict["C"] = "Q15777"
+lang_dict["Java"] = "Q251"
 
-f = open("unmatched_license", "w")
+license_dict = get_mapping("P275")
+license_dict['BSD 3-clause "New" or "Revised" License'] = "Q18491847"
+license_dict["GNU General Public License v3.0 only"] = "Q10513445"
+
+f = open("unmatched_license_lang", "w")
 
 # Get list of wikidata-items to edit
 wdlist = runquery(query)
@@ -175,6 +81,7 @@ for software in wdlist:
             target = create_target("item", lqid)
             create_andor_source(item, "P277", target, None, source)
         else:
+            f.write(main_lang + "\n")
             pass
 
     licensename = root.findtext("result/project/licenses/license/name")
@@ -191,7 +98,7 @@ for software in wdlist:
             target = create_target("item", lqid)
             create_andor_source(item, "P275", target, None, source)
         else:
-            f.write(licensename)
+            f.write(licensename + "\n")
             pass
 
     # forum = root.findtext("result/project/links/link[category='Forums']/url")
