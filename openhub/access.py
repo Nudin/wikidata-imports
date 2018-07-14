@@ -24,9 +24,13 @@ site = pywikibot.Site("wikidata", "wikidata")
 wikidata = site.data_repository()
 
 today = datetime.date.today()
+openhub = pywikibot.ItemPage(wikidata, "Q124688")
 
 
 def createsource(url_str, title_str):
+    statedin = pywikibot.Claim(wikidata, "P248")
+    statedin.setTarget(openhub)
+
     url = pywikibot.Claim(wikidata, "P854")
     url.setTarget(url_str)
 
@@ -37,7 +41,7 @@ def createsource(url_str, title_str):
     date = pywikibot.WbTime(year=today.year, month=today.month, day=today.day)
     retrieved.setTarget(date)
 
-    return [url, title, retrieved]
+    return [statedin, url, title, retrieved]
 
 
 def create_andor_source(item, prop, ptype, target, summary, source):
@@ -146,6 +150,7 @@ for software in wdlist:
                 openhubname
             ),
         )
+        # TODO add repo_type as qualifier
         create_andor_source(item, "P1324", "string", repo_url, "Adding repo", source)
 
     main_lang = root.findtext("result/project/analysis/main_language_name")
