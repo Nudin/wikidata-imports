@@ -15,22 +15,6 @@ SELECT DISTINCT ?item ?itemLabel ?openhubname WHERE
   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
 }
 """
-lang_query = """
-SELECT DISTINCT ?lang ?langLabel WHERE
-{
-  ?lang wdt:P31/wdt:P279* wd:Q9143.
-  ?lang rdfs:label ?langLabel.
-  FILTER (lang(?langLabel) = "en")
-}
-"""
-license_query = """
-SELECT DISTINCT ?license ?licenseLabel WHERE
-{
-  ?item wdt:P275 ?license.
-  ?license rdfs:label|skos:altLabel ?licenseLabel.
-  FILTER (lang(?licenseLabel) = "en")
-}
-"""
 
 oh_api_key = open("mykey").readline()[:-1]
 apiurl = "https://www.openhub.net/p/{}.xml?api_key={}"
@@ -83,29 +67,34 @@ def runquery(query):
         return None
 
 
-languages = runquery(lang_query)
-bad = []
-lang_dict = {}
-for l in languages:
-    key = l["langLabel"]["value"]
-    if key in lang_dict:
-        del lang_dict[key]
-        bad.append(key)
-    elif key not in bad:
-        lang_dict[key] = l["lang"]["value"][31:]
-del bad
+def get_mapping(prop):
+    query = (
+        """
+    SELECT DISTINCT ?object ?label WHERE
+    {
+      ?item wdt:%s ?object.
+      ?object rdfs:label|skos:altLabel ?label.
+      FILTER (lang(?label) = "en")
+    }
+    """
+        % prop
+    )
+    results = runquery(query)
+    bad = []
+    mapping = {}
+    for l in results:
+        key = l["label"]["value"]
+        if key in mapping:
+            del mapping[key]
+            bad.append(key)
+        elif key not in bad:
+            mapping[key] = l["object"]["value"][31:]
+    del bad
+    return mapping
 
-licenses = runquery(license_query)
-bad = []
-license_dict = {}
-for l in licenses:
-    key = l["licenseLabel"]["value"]
-    if key in license_dict:
-        del license_dict[key]
-        bad.append(key)
-    elif key not in bad:
-        license_dict[key] = l["license"]["value"][31:]
-del bad
+
+lang_dict = get_mapping("P277")
+license_dict = get_mapping("P275")
 
 f = open("unmatched_license", "w")
 
