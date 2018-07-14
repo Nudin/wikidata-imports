@@ -55,6 +55,25 @@ def createsource(url_str, title_str):
     return [url, title, retrieved]
 
 
+def create_andor_source(item, prop, qid, summary, source):
+    source_summary = "Adding Open-Hub as source"
+    if prop not in item.claims:
+        claim = pywikibot.Claim(repo, prop)
+        target = pywikibot.ItemPage(repo, qid)
+        claim.setTarget(target)
+        item.addClaim(claim, summary=summary)
+        claim.addSources(source_language, summary=source_summary)
+        print("Successfully added")
+    elif (
+        len(item.claims[prop]) == 1
+        and item.claims[prop][0].getTarget().getID() == qid
+        and len(item.claims[prop][0].sources) == 0
+    ):
+        claim = item.claims[prop][0]
+        claim.addSources(source, summary=source_summary)
+        print("Successfully sourced")
+
+
 def runquery(query):
     url = wdqurl + urllib.parse.quote_plus(query)
     r = requests.get(url)
@@ -88,7 +107,7 @@ for l in licenses:
         license_dict[key] = l["license"]["value"][31:]
 del bad
 
-f = open("unmatched_license", "a")
+f = open("unmatched_license", "w")
 
 # Get list of wikidata-items to edit
 wdlist = runquery(query)
@@ -114,46 +133,35 @@ for software in wdlist:
     item = pywikibot.ItemPage(repo, qid)
     item.get()
 
-    source_language = createsource(
-        "https://www.openhub.net/p/{}/analyses/latest/languages_summary".format(
-            openhubname
-        ),
-        "The {} Open Source Project on Open Hub: Languages Page".format(openhubname),
-    )
-
     main_lang = root.findtext("result/project/analysis/main_language_name")
     if main_lang is not None:
         if main_lang in lang_dict:
             lqid = lang_dict[main_lang]
             print(main_lang, lqid)
-            if "P277" not in item.claims:
-                claim = pywikibot.Claim(repo, "P277")
-                target = pywikibot.ItemPage(repo, lqid)
-                claim.setTarget(target)
-                item.addClaim(claim, summary=u"Adding language")
-                claim.addSources(source_language, summary="Adding source.")
-                print("Added language")
+            source_language = createsource(
+                "https://www.openhub.net/p/{}/analyses/latest/languages_summary".format(
+                    openhubname
+                ),
+                "The {} Open Source Project on Open Hub: Languages Page".format(
+                    openhubname
+                ),
+            )
+            create_andor_source(item, "P277", lqid, "Adding language", source_language)
         else:
             pass
 
-    source_license = createsource(
-        "https://www.openhub.net/p/{}/licenses".format(openhubname),
-        "The {} Open Source Project on Open Hub: Licenses Page".format(openhubname),
-    )
-
     licensename = root.findtext("result/project/licenses/license/name")
     if licensename is not None:
-        print(licensename)
         if licensename in license_dict:
             lqid = license_dict[licensename]
             print(licensename, lqid)
-            if "P275" not in item.claims:
-                claim = pywikibot.Claim(repo, "P275")
-                target = pywikibot.ItemPage(repo, lqid)
-                claim.setTarget(target)
-                item.addClaim(claim, summary=u"Adding license")
-                claim.addSources(source_license, summary="Adding source.")
-                print("Added language")
+            source_license = createsource(
+                "https://www.openhub.net/p/{}/licenses".format(openhubname),
+                "The {} Open Source Project on Open Hub: Licenses Page".format(
+                    openhubname
+                ),
+            )
+            create_andor_source(item, "P275", lqid, "Adding license", source_license)
         else:
             f.write(licensename)
             pass
