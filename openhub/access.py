@@ -23,41 +23,46 @@ enlistmentsapi = "p/{}/enlistments.xml"
 site = pywikibot.Site("wikidata", "wikidata")
 wikidata = site.data_repository()
 
-today = datetime.date.today()
+_today = datetime.date.today()
+today = pywikibot.WbTime(year=_today.year, month=_today.month, day=_today.day)
 openhub = pywikibot.ItemPage(wikidata, "Q124688")
 
 
 def createsource(url_str, title_str):
-    statedin = pywikibot.Claim(wikidata, "P248")
-    statedin.setTarget(openhub)
-
-    url = pywikibot.Claim(wikidata, "P854")
-    url.setTarget(url_str)
-
-    title = pywikibot.Claim(wikidata, "P1476")
-    title.setTarget(pywikibot.WbMonolingualText(title_str, "en"))
-
-    retrieved = pywikibot.Claim(wikidata, "P813")
-    date = pywikibot.WbTime(year=today.year, month=today.month, day=today.day)
-    retrieved.setTarget(date)
-
+    statedin = create_claim("P248", openhub)
+    url = create_claim("P854", url_str)
+    title = create_claim("P1476", create_target("entext", title_str))
+    retrieved = create_claim("P813", today)
     return [statedin, url, title, retrieved]
 
 
-def create_andor_source(item, prop, ptype, target, summary, source):
-    source_summary = "Adding Open-Hub as source"
+def create_claim(prop, target):
+    claim = pywikibot.Claim(wikidata, prop)
+    claim.setTarget(target)
+    return claim
+
+
+def create_target(ptype, target_str):
     if ptype == "item":
-        target = pywikibot.ItemPage(wikidata, target)
+        target = pywikibot.ItemPage(wikidata, target_str)
     elif ptype == "string":
-        target = target
+        target = target_str
+    elif ptype == "entext":
+        target = pywikibot.WbMonolingualText(target_str, "en")
     else:
         raise NotImplementedError(ptype)
+    return target
+
+
+def create_andor_source(item, prop, target, qualifier, source):
+    source_summary = "Adding Open-Hub as source"
     if prop not in item.claims:
-        claim = pywikibot.Claim(wikidata, prop)
-        claim.setTarget(target)
-        item.addClaim(claim, summary=summary)
+        claim = create_claim(prop, target)
+        item.addClaim(claim)
+        if qualifier is not None:
+            claim.addQualifier(qualifier)
         claim.addSources(source, summary=source_summary)
-        print("Successfully added")
+        print(" Successfully added")
     elif (
         len(item.claims[prop]) == 1
         and item.claims[prop][0].getTarget() == target
@@ -65,7 +70,7 @@ def create_andor_source(item, prop, ptype, target, summary, source):
     ):
         claim = item.claims[prop][0]
         claim.addSources(source, summary=source_summary)
-        print("Successfully sourced")
+        print(" Successfully sourced")
 
 
 def runquery(query):
@@ -143,21 +148,22 @@ for software in wdlist:
         repo_type = repos[0].findtext("type")
         if repo_type != "git":
             continue
-        print(repo_url, repo_type)
+        print("", repo_url, repo_type)
         source = createsource(
             "https://www.openhub.net/p/{}/enlistments".format(openhubname),
             "The {} Open Source Project on Open Hub: Code Locations Page".format(
                 openhubname
             ),
         )
-        # TODO add repo_type as qualifier
-        create_andor_source(item, "P1324", "string", repo_url, "Adding repo", source)
+        target = create_target("string", repo_url)
+        qualifier = create_claim("P2700", create_target("item", "Q186055"))
+        create_andor_source(item, "P1324", target, qualifier, source)
 
     main_lang = root.findtext("result/project/analysis/main_language_name")
     if main_lang is not None:
         if main_lang in lang_dict:
             lqid = lang_dict[main_lang]
-            print(main_lang, lqid)
+            print("", main_lang, lqid)
             source = createsource(
                 "https://www.openhub.net/p/{}/analyses/latest/languages_summary".format(
                     openhubname
@@ -166,7 +172,8 @@ for software in wdlist:
                     openhubname
                 ),
             )
-            create_andor_source(item, "P277", "item", lqid, "Adding language", source)
+            target = create_target("item", lqid)
+            create_andor_source(item, "P277", target, None, source)
         else:
             pass
 
@@ -174,14 +181,15 @@ for software in wdlist:
     if licensename is not None:
         if licensename in license_dict:
             lqid = license_dict[licensename]
-            print(licensename, lqid)
+            print("", licensename, lqid)
             source = createsource(
                 "https://www.openhub.net/p/{}/licenses".format(openhubname),
                 "The {} Open Source Project on Open Hub: Licenses Page".format(
                     openhubname
                 ),
             )
-            create_andor_source(item, "P275", "item", lqid, "Adding license", source)
+            target = create_target("item", lqid)
+            create_andor_source(item, "P275", target, None, source)
         else:
             f.write(licensename)
             pass
