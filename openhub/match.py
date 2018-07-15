@@ -2,7 +2,7 @@
 
 import pywikibot
 
-from oloho import oloho_getdata
+from oloho import get_cache_miss, oloho_getdata
 from wikidata import create_claim, create_target, runquery, wikidata
 
 query = """
@@ -72,3 +72,7 @@ for software in wdlist:
         target = create_target("string", guessed_name)
         claim = create_claim("P1972", target)
         item.addClaim(claim)
+
+    if get_cache_miss() > 950:
+        print("Warning % api-calls made. Exiting" % get_cache_miss())
+        break
