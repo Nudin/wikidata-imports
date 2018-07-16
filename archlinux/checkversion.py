@@ -10,6 +10,7 @@ from glob import glob
 from itertools import zip_longest
 
 import requests
+from jinja2 import Environment, FileSystemLoader
 from joblib import Memory
 from packaging.version import parse
 from tqdm import tqdm
@@ -18,56 +19,10 @@ abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
 
-starttext = """<!DOCTYPE html><html lang='en'>
-<style>
-    table { border-collapse: collapse; }
-    table, th, td { border: 1px solid black; padding: 0.3em; }
-    .major { background-color: red; }
-    .minor { background-color: yellow; }
-</style>
-<body>
-<h1>Probably outdated Software-items on Wikidata</h1>
-<p>List of software where the newest version-number on Wikidata is older
-that the version available in the Arch-Linux-Repositories. "Package does
-not exist!" means, that there is a Arch-package-name set in Wikidata but no
-such Package in the Arch-Repos!</p>
-<table>
- <tr><th>Paket</th><th>Version in Arch</th><th>Version in Wikidata</th>
-     <th>Newest (Beta) on Wikidata</th><th>github-repo</th></tr>"""
-missing = """<tr>
-<td><a href='https://www.wikidata.org/wiki/%s'>%s</td>
-<td>Package does not exist!</td>
-<td>%s</td></tr>"""
-outofdate = """<tr class='%s'>
-<td><a href='https://www.wikidata.org/wiki/%s#P348'>%s</td>
-<td>%s</td>
-<td>%s</td>
-<td>%s</td>
-<td>%s</td>
-</tr>"""
-statistics = """<h2>Statistics</h2>
-<ul>
-<li>Items Software running on Linux: %i</li>
-<li>Items with Arch-Label: %i</li>
-<li>Items with Arch-Label & a version number: %i
-<li>Items with matching version number: %i</li>
-<li>Items with outdated version number: %i</li>
-<li>Items with version number newer than Arch: %i</li>
-</ul>
-<h2>More Todo-Lists</h2>
-<ul>
-    <li><a href="http://tinyurl.com/y7d2ejp7">
-        Items with multiple versions with identical Rank</a></li>
-    <li><a href="http://tinyurl.com/y9mz76w9">
-        List of items with arch-pkg but without version number.</a></li>
-    <li><a href="http://tinyurl.com/y7gg2s95">Repos found in sources</a></li>
-</ul>
-"""
-endtable = "</table>"
-endtext = """<br>Date: %s<br>
-Data from arch repos cached for up to %i minutes<br>
-Cachemisses: %i
-<body></html>"""
+file_loader = FileSystemLoader(".")
+env = Environment(loader=file_loader)
+template = env.get_template("versioncomparing.html.jinja")
+
 
 archurl = "https://www.archlinux.org/packages/search/json/?name={}"
 # List of repos in which we want to search
@@ -289,11 +244,12 @@ def auto_tqdm(iterlist):
 
 
 # get statistics
-numberArchLinks = getSPARQLcountvalue(queryNumberArchLinks)
-numberVersion = getSPARQLcountvalue(queryNumberVersions)
-numberLinuxItems = getSPARQLcountvalue(queryNumberLinuxItems)
-countOutdated = 0
-countNewer = 0
+statistics = {}
+statistics["arch"] = getSPARQLcountvalue(queryNumberArchLinks)
+statistics["version"] = getSPARQLcountvalue(queryNumberVersions)
+statistics["linux"] = getSPARQLcountvalue(queryNumberLinuxItems)
+statistics["outdated"] = 0
+statistics["newer"] = 0
 
 # Get newest version numbers from Wikidata
 wdlist = runSPARQLquery(query)
@@ -329,16 +285,16 @@ for software in wdgithublist:
     githublist[qid] = github
 
 # Check every software against the Arch repos
-print(starttext)
 outdatedlist = []
 archversions = {}
+orphanlist = []
 for qid in auto_tqdm(versionlist):
     name = names[qid]
     wdversion = versionlist[qid]
     betaversion = betaversionlist.get(qid, "")
     archversion_str = runarchquery(name)
     if archversion_str is None:
-        print(missing % (qid, name, wdversion))
+        orphanlist.append(qid)
     else:
         archversion = Software(archversion_str, qid in greylist)
         archversions[qid] = archversion
@@ -347,47 +303,31 @@ for qid in auto_tqdm(versionlist):
             continue
         if archversion > wdversion and archversion != betaversion:
             outdatedlist.append(qid)
-            countOutdated += 1
+            statistics["outdated"] += 1
         elif archversion < wdversion:
-            countNewer += 1
+            statistics["newer"] += 1
+
+
+def getdelta(qid):
+    return archversions[qid] - versionlist[qid]
 
 
 # Sort (bigger steps in Versionsnummer fist)
-outdatedlist = sorted(outdatedlist, key=lambda s: archversions[s] - versionlist[s])
+outdatedlist = sorted(outdatedlist, key=getdelta, reverse=True)
+
+lvllist = {}
+for qid in outdatedlist:
+    delta = getdelta(qid)
+    if delta[0] != 0:
+        lvllist[qid] = "major"
+    elif len(delta) > 1 and delta[1] != 0:
+        lvllist[qid] = "minor"
+    else:
+        lvllist[qid] = "bug"
+
+statistics["cachemiss"] = cachemisscounter
+date = datetime.now()
 
 # print out table of outdated versions
-for qid in outdatedlist:
-    name = names[qid]
-    wdversion = versionlist[qid]
-    betaversion = betaversionlist.get(qid, "")
-    archversion = archversions[qid]
-    githublink = githublist.get(qid, "")
-    delta = archversion - wdversion
-    if delta[0] != 0:
-        lvl = "major"
-    elif len(delta) > 1 and delta[1] != 0:
-        lvl = "minor"
-    else:
-        lvl = "bug"
-    try:
-        print(
-            outofdate
-            % (lvl, qid, name, archversion, wdversion, betaversion, githublink)
-        )
-    except Exception:
-        pass
-
-print(endtable)
-matchingversions = numberVersion - countOutdated - countNewer
-print(
-    statistics
-    % (
-        numberLinuxItems,
-        numberArchLinks,
-        numberVersion,
-        matchingversions,
-        countOutdated,
-        countNewer,
-    )
-)
-print(endtext % (datetime.now(), cachetime, cachemisscounter))
+html = template.render(globals())
+print(html)

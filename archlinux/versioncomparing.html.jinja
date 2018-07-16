@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang='en'>
+<title>Outdated Software-Items on Wikidata</title>
+<style>
+    table { border-collapse: collapse; }
+    table, th, td { border: 1px solid black; padding: 0.3em; }
+    .major { background-color: red; }
+    .minor { background-color: yellow; }
+</style>
+
+<body>
+<h1>Probably outdated Software-items on Wikidata</h1>
+<p>List of software where the newest version-number on Wikidata is older
+that the version available in the Arch-Linux-Repositories. "Package does
+not exist!" means, that there is a Arch-package-name set in Wikidata but no
+such Package in the Arch-Repos!</p>
+
+<table>
+    <tr>
+         <th>Paket</th><th>Version in Arch</th><th>Version in Wikidata</th>
+         <th>Newest (Beta) on Wikidata</th><th>github-repo</th>
+    </tr>
+    {% for qid in orphanlist %}
+    <tr>
+        <td><a href='https://www.wikidata.org/wiki/{{qid}}'>{{names[qid]}}</a></td>
+        <td>Package does not exist!</td>
+        <td>{{versionlist[qid]}}</td>
+    </tr>
+    {% endfor %}
+    {% for qid in outdatedlist %}
+    <tr class='{{lvllist[qid]}}'>
+        <td><a href='https://www.wikidata.org/wiki/{{qid}}#P348'>{{names[qid]}}</a></td>
+        <td>{{archversions[qid]}}</td>
+        <td>{{versionlist[qid]}}</td>
+        <td>{{betaversionlist[qid]}}</td>
+        <td>{{githublist[qid]}}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<h2>Statistics</h2>
+<ul>
+    <li>Items Software running on Linux: {{statistics.linux}}</li>
+    <li>Items with Arch-Label: {{statistics.arch}}</li>
+    <li>Items with Arch-Label &amp; a version number: {{statistics.version}}</li>
+    <li>Items with matching version number: {{statistics.version - statistics.outdated - statistics.newer}}</li>
+    <li>Items with outdated version number: {{statistics.outdated}}</li>
+    <li>Items with version number newer than Arch: {{statistics.newer}}</li>
+</ul>
+
+<h2>More Todo-Lists</h2>
+<ul>
+    <li><a href="http://tinyurl.com/y7d2ejp7">
+        Items with multiple versions with identical Rank</a></li>
+    <li><a href="http://tinyurl.com/y9mz76w9">
+        List of items with arch-pkg but without version number.</a></li>
+    <li><a href="http://tinyurl.com/y7gg2s95">Repos found in sources</a></li>
+</ul>
+
+<br>Date: {{date}}<br>
+Data from arch repos cached for up to {{cachetime}} minutes<br>
+Cachemisses: {{statistics.cachemiss}}
+
+</body>
+</html>
