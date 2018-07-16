@@ -263,11 +263,12 @@ def runquery(url):
 
 # Run a Spaql-Query
 def runSPARQLquery(query):
-    return runquery(wdqurl + urllib.parse.quote_plus(query))["bindings"]
+    res = runquery(wdqurl + urllib.parse.quote_plus(query))["bindings"]
+    return [{k: v["value"] for (k, v) in r.items()} for r in res]
 
 
 def getSPARQLcountvalue(query):
-    return int(runSPARQLquery(query)[0]["count"]["value"])
+    return int(runSPARQLquery(query)[0]["count"])
 
 
 @memory.cache
@@ -299,9 +300,9 @@ wdlist = runSPARQLquery(query)
 versionlist = MaxDict()
 names = {}
 for software in wdlist:
-    qid = software["item"]["value"][31:]
-    name = software["archlabel"]["value"]
-    wdversionstr = software["vers"]["value"]
+    qid = software["item"][31:]
+    name = software["archlabel"]
+    wdversionstr = software["vers"]
     if qid in blacklist:
         continue
     wdversion = Software(wdversionstr, qid in greylist)
@@ -311,9 +312,9 @@ for software in wdlist:
 wdlist_beta = runSPARQLquery(betaquery)
 betaversionlist = MaxDict()
 for software in wdlist_beta:
-    qid = software["item"]["value"][31:]
-    name = software["archlabel"]["value"]
-    wdversionstr = software["vers"]["value"]
+    qid = software["item"][31:]
+    name = software["archlabel"]
+    wdversionstr = software["vers"]
     if qid in blacklist:
         continue
     wdversion = Software(wdversionstr)
@@ -323,8 +324,8 @@ for software in wdlist_beta:
 wdgithublist = runSPARQLquery(querygithub)
 githublist = {}
 for software in wdgithublist:
-    qid = software["item"]["value"][31:]
-    github = software["github"]["value"]
+    qid = software["item"][31:]
+    github = software["github"]
     githublist[qid] = github
 
 # Check every software against the Arch repos
