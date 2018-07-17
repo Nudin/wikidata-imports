@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 
+import re
+
 import pywikibot
+import unidecode
+from tqdm import tqdm
 
 from oloho import get_cache_miss, oloho_getdata
 from wikidata import create_claim, create_target, runquery, wikidata
@@ -8,7 +12,8 @@ from wikidata import create_claim, create_target, runquery, wikidata
 query = """
 SELECT DISTINCT ?item ?itemLabel ?website WHERE
 {
-  ?item wdt:P31/wdt:P279* wd:Q341.
+  ?item wdt:P275 ?freelicense.
+  ?freelicense (wdt:P31/wdt:P279*) wd:Q3943414.
   ?item wdt:P856 ?website.
   MINUS {?item wdt:P1972 ?openhubname}.
   MINUS { ?item wdt:P31*/wdt:P279* wd:Q9135 }.
@@ -45,34 +50,41 @@ mainapi = "p/{}.xml"
 wdlist = runquery(query)
 
 done = []
-for software in wdlist:
-    qid = software["item"]["value"][31:]
-    softwarename = software["itemLabel"]["value"]
-    website = software["website"]["value"]
-    guessed_name = softwarename.replace(" ", "_").lower()
-
-    if softwarename in done:
-        continue
-
-    try:
-        root = oloho_getdata(mainapi, guessed_name)
-        item = pywikibot.ItemPage(wikidata, qid)
-    except Exception as e:
-        print("\n" + guessed_name, e)
-        continue
-    print("\n={}=".format(softwarename))
-
-    website_oh = root.findtext("result/project/homepage_url")
-    if normurl(website) == normurl(website_oh):
-        print("match!")
-        item.get()
-        done.append(softwarename)
-        if "P1972" in item.claims:
+with tqdm(wdlist, postfix="Api calls: ") as t:
+    for software in t:
+        qid = software["item"]["value"][31:]
+        softwarename = software["itemLabel"]["value"]
+        website = software["website"]["value"]
+        guessed_name = re.sub(r"[ .]", "_", softwarename).lower()
+        guessed_name = unidecode.unidecode(guessed_name)
+        guessed_name = re.sub(r"[^a-z_-]", "", guessed_name)
+        if softwarename in done:
             continue
-        target = create_target("string", guessed_name)
-        claim = create_claim("P1972", target)
-        item.addClaim(claim)
 
-    if get_cache_miss() > 950:
-        print("Warning % api-calls made. Exiting" % get_cache_miss())
-        break
+        try:
+            root = oloho_getdata(mainapi, guessed_name)
+            cachemiss = get_cache_miss()
+            t.postfix = "Api calls: %i" % cachemiss
+            item = pywikibot.ItemPage(wikidata, qid)
+        except Exception as e:
+            if e.args[0] == "API-Error" and e.args[1] == 401:
+                t.write("API Limit Exceeded")
+                break
+            t.write("\n%s %s" % (guessed_name, e))
+            continue
+        t.write("\n={}=".format(softwarename))
+
+        website_oh = root.findtext("result/project/homepage_url")
+        if normurl(website) == normurl(website_oh):
+            t.write("match!")
+            item.get()
+            done.append(softwarename)
+            if "P1972" in item.claims:
+                continue
+            target = create_target("string", guessed_name)
+            claim = create_claim("P1972", target)
+            item.addClaim(claim)
+
+        if get_cache_miss() > 950:
+            t.write("Warning %s api-calls made. Exiting" % cachemiss)
+            break

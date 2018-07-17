@@ -79,7 +79,7 @@ def search_sources(sources, string):
     return any([string in c.getTarget() for s in sources for c in s["P854"]])
 
 
-def create_andor_source(item, prop, target, qualifier, source):
+def create_andor_source(item, prop, target, qualifier, source, logger=print):
     source_summary = "Adding Open-Hub as source"
     if prop not in item.claims:
         claim = create_claim(prop, target)
@@ -87,11 +87,11 @@ def create_andor_source(item, prop, target, qualifier, source):
         if qualifier is not None:
             claim.addQualifier(qualifier)
         claim.addSources(source, summary=source_summary)
-        print("  Successfully added")
+        logger("  Successfully added")
     else:
         for claim in item.claims[prop]:
             if claim.getTarget() == target and not search_sources(
                 claim.sources, "openhub"
             ):
                 claim.addSources(source, summary=source_summary)
-                print("  Successfully sourced")
+                logger("  Successfully sourced")
