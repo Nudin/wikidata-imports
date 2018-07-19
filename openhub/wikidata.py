@@ -42,7 +42,7 @@ def get_mapping(prop):
     bad = []
     mapping = {}
     for l in results:
-        key = l["label"]["value"]
+        key = l["label"]["value"].lower()
         if key in mapping:
             del mapping[key]
             bad.append(key)

@@ -21,12 +21,16 @@ enlistmentsapi = "p/{}/enlistments.xml"
 
 
 lang_dict = get_mapping("P277")
-lang_dict["C"] = "Q15777"
-lang_dict["Java"] = "Q251"
+lang_dict["c"] = "Q15777"
+lang_dict["java"] = "Q251"
 
 license_dict = get_mapping("P275")
-license_dict['BSD 3-clause "New" or "Revised" License'] = "Q18491847"
-license_dict["GNU General Public License v3.0 only"] = "Q10513445"
+license_dict['bsd 3-clause "new" or "revised" license'] = "Q18491847"
+license_dict["gnu general public license v3.0 only"] = "Q10513445"
+license_dict['gnu library or "lesser" gpl (lgpl)'] = "Q192897"
+license_dict["bsd 4-clause (university of california-specific)"] = "Q21503790"
+license_dict["gnu general public license v2.0 only"] = "Q10513450"
+license_dict["creative commons attribution-sharealike 2.5"] = "Q19113751"
 
 f = open("unmatched_license_lang", "a")
 
@@ -76,6 +80,7 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
 
         main_lang = root.findtext("result/project/analysis/main_language_name")
         if main_lang is not None:
+            main_lang = main_lang.lower()
             if main_lang in lang_dict:
                 lqid = lang_dict[main_lang]
                 t.write(" {} - {}".format(main_lang, lqid))
@@ -95,6 +100,7 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
 
         licensename = root.findtext("result/project/licenses/license/name")
         if licensename is not None:
+            licensename = licensename.lower()
             if licensename in license_dict:
                 lqid = license_dict[licensename]
                 t.write(" {} - {}".format(licensename, lqid))
