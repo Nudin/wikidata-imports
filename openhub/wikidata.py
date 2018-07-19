@@ -13,6 +13,9 @@ _today = datetime.date.today()
 today = pywikibot.WbTime(year=_today.year, month=_today.month, day=_today.day)
 openhub = pywikibot.ItemPage(wikidata, "Q124688")
 
+counter_added = 0
+counter_sourced = 0
+
 
 def runquery(query):
     url = wdqurl + urllib.parse.quote_plus(query)
@@ -80,6 +83,7 @@ def search_sources(sources, string):
 
 
 def create_andor_source(item, prop, target, qualifier, source, logger=print):
+    global counter_added, counter_sourced
     source_summary = "Adding Open-Hub as source"
     if prop not in item.claims:
         claim = create_claim(prop, target)
@@ -87,6 +91,7 @@ def create_andor_source(item, prop, target, qualifier, source, logger=print):
         if qualifier is not None:
             claim.addQualifier(qualifier)
         claim.addSources(source, summary=source_summary)
+        counter_added += 1
         logger("  Successfully added")
     else:
         for claim in item.claims[prop]:
@@ -94,4 +99,9 @@ def create_andor_source(item, prop, target, qualifier, source, logger=print):
                 claim.sources, "openhub"
             ):
                 claim.addSources(source, summary=source_summary)
+                counter_sourced += 1
                 logger("  Successfully sourced")
+
+
+def get_counters():
+    return (counter_added, counter_sourced)

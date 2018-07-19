@@ -4,7 +4,8 @@ from tqdm import tqdm
 
 from oloho import get_cache_miss, oloho_getdata
 from wikidata import (create_andor_source, create_claim, create_target,
-                      createsource, get_mapping, runquery, wikidata)
+                      createsource, get_counters, get_mapping, runquery,
+                      wikidata)
 
 query = """
 SELECT DISTINCT ?item ?itemLabel ?openhubname WHERE
@@ -113,3 +114,6 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
         # if forum is not None:
         #     t.write(forum)
         #     pass  # Wikidata-Editing
+
+
+t.write("Added {} statements & sourced {} existing statements".format(*get_counters()))
