@@ -79,7 +79,11 @@ def create_target(ptype, target_str):
 
 
 def search_sources(sources, string):
-    return any([string in c.getTarget() for s in sources for c in s["P854"]])
+    for source in sources:
+        for claim in source.get("P854", []):
+            if string in claim.getTarget():
+                return True
+    return False
 
 
 def create_andor_source(item, prop, target, qualifier, source, logger=print):

@@ -56,7 +56,7 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
                 t.write("API Limit Exceeded")
                 break
             else:
-                t.write(e)
+                t.write(str(e))
                 continue
 
         # openhub_url = root.find("result/project/html_url")
