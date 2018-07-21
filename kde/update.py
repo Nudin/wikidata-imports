@@ -48,7 +48,7 @@ statedin.setTarget(srcurl)
 title = pywikibot.Claim(repo, "P1476")
 title.setTarget(pywikibot.WbMonolingualText(srctitle, "en"))
 retrieved = pywikibot.Claim(repo, "P813")
-today = datetime.date.today()
+today = datetime.datetime.utcnow().date()
 date = pywikibot.WbTime(year=today.year, month=today.month, day=today.day)
 retrieved.setTarget(date)
 
