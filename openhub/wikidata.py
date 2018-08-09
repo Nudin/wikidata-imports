@@ -61,7 +61,10 @@ def get_mapping(prop):
     return mapping
 
 
-def createsource(url_str, title_str):
+def createsource(url_str, title_str, name=None):
+    if name is not None:
+        url_str = url_str.format(name)
+        title_str = title_str.format(name)
     statedin = create_claim("P248", openhub)
     url = create_claim("P854", url_str)
     title = create_claim("P1476", create_target("entext", title_str))

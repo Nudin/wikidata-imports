@@ -9,6 +9,56 @@ from wikidata import (create_andor_source, create_claim, create_target,
                       createsource, get_counters, get_mapping, runquery,
                       wikidata)
 
+
+def coroutine(func):
+    def start(*args, **kwargs):
+        cr = func(*args, **kwargs)
+        cr.next()
+        return cr
+    return start
+
+
+@coroutine
+def translator(filename):
+    tranlation_dict = {}
+    tranlation_dict["lang"] = {
+        "c": "Q15777",
+        "java": "Q251",
+        "perl": "Q42478",
+        **get_mapping("P277")
+        }
+
+    tranlation_dict["license"] = {
+        'bsd 3-clause "new" or "revised" license': "Q18491847",
+        'bsd 3-clause "new" or "revised" license': "Q18491847",
+        "gnu general public license v3.0 only": "Q10513445",
+        'gnu library or "lesser" gpl (lgpl)': "Q192897",
+        "bsd 4-clause (university of california-specific)": "Q21503790",
+        "gnu general public license v2.0 only": "Q10513450",
+        "creative commons attribution-sharealike 2.5": "Q19113751",
+        "mit license": "Q334661",
+        "eclipse public license 1.0": "Q55633170",
+        "gnu affero general public license 3.0 or later": "Q27020062",
+        "gpl 2": "Q10513450",
+        'bsd 2-clause "freebsd" license': "Q18517294",
+        "zlib license (aka zlib/libpng)": "Q207243",
+        "gnu lesser general public license v2.1 only": "Q18534390",
+        **get_mapping("P275")
+        }
+    with open(filename, "w") as f:
+        while True:
+            (group, obj) = (yield)
+            if obj is None:
+                return None
+            obj = obj.lower()
+            if obj in tranlation_dict[group]:
+                return tranlation_dict[group][obj]
+            else:
+                f.write(main_lang + "\n")
+                f.flush()
+                return None
+
+
 query = """
 SELECT DISTINCT ?item ?itemLabel ?openhubname WHERE
 {
@@ -18,28 +68,7 @@ SELECT DISTINCT ?item ?itemLabel ?openhubname WHERE
 }
 """
 
-lang_dict = get_mapping("P277")
-lang_dict["c"] = "Q15777"
-lang_dict["java"] = "Q251"
-lang_dict["perl"] = "Q42478"
-
-license_dict = get_mapping("P275")
-license_dict['bsd 3-clause "new" or "revised" license'] = "Q18491847"
-license_dict["gnu general public license v3.0 only"] = "Q10513445"
-license_dict['gnu library or "lesser" gpl (lgpl)'] = "Q192897"
-license_dict["bsd 4-clause (university of california-specific)"] = "Q21503790"
-license_dict["gnu general public license v2.0 only"] = "Q10513450"
-license_dict["creative commons attribution-sharealike 2.5"] = "Q19113751"
-license_dict["mit license"] = "Q334661"
-license_dict["eclipse public license 1.0"] = "Q55633170"
-license_dict["gnu affero general public license 3.0 or later"] = "Q27020062"
-license_dict["gpl 2"] = "Q10513450"
-license_dict['bsd 2-clause "freebsd" license'] = "Q18517294"
-license_dict["zlib license (aka zlib/libpng)"] = "Q207243"
-license_dict["gnu lesser general public license v2.1 only"] = "Q18534390"
-
-
-f = open("unmatched_license_lang", "w")
+translator = translator("unmatched_license_lang")
 
 # Get list of wikidata-items to edit
 wdlist = runquery(query)
@@ -76,54 +105,37 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
                 continue
             t.write(" {} - {}".format(repo_url, repo_type))
             source = createsource(
-                "https://www.openhub.net/p/{}/enlistments".format(openhubname),
-                "The {} Open Source Project on Open Hub: Code Locations Page".format(
-                    openhubname
-                ),
+                "https://www.openhub.net/p/{}/enlistments",
+                "The {} Open Source Project on Open Hub: Code Locations Page",
+                openhubname
             )
             target = create_target("string", repo_url)
             qualifier = create_claim("P2700", create_target("item", "Q186055"))
             create_andor_source(item, "P1324", target, qualifier, source, t.write)
 
         main_lang = project.findtext("analysis/main_language_name")
-        if main_lang is not None:
-            main_lang = main_lang.lower()
-            if main_lang in lang_dict:
-                lqid = lang_dict[main_lang]
-                t.write(" {} - {}".format(main_lang, lqid))
-                source = createsource(
-                    "https://www.openhub.net/p/{}/analyses/latest/languages_summary".format(
-                        openhubname
-                    ),
-                    "The {} Open Source Project on Open Hub: Languages Page".format(
-                        openhubname
-                    ),
-                )
-                target = create_target("item", lqid)
-                create_andor_source(item, "P277", target, None, source, t.write)
-            else:
-                f.write(main_lang + "\n")
-                f.flush()
-                pass
+        lqid = translator.send("lang", main_lang)
+        if lqid is not None:
+            t.write(" {} - {}".format(main_lang, lqid))
+            source = createsource(
+                "https://www.openhub.net/p/{}/analyses/latest/languages_summary",
+                "The {} Open Source Project on Open Hub: Languages Page",
+                openhubname
+            )
+            target = create_target("item", lqid)
+            create_andor_source(item, "P277", target, None, source, t.write)
 
         licensename = project.findtext("licenses/license/name")
-        if licensename is not None:
-            licensename = licensename.lower()
-            if licensename in license_dict:
-                lqid = license_dict[licensename]
-                t.write(" {} - {}".format(licensename, lqid))
-                source = createsource(
-                    "https://www.openhub.net/p/{}/licenses".format(openhubname),
-                    "The {} Open Source Project on Open Hub: Licenses Page".format(
-                        openhubname
-                    ),
-                )
-                target = create_target("item", lqid)
-                create_andor_source(item, "P275", target, None, source, t.write)
-            else:
-                f.write(licensename + "\n")
-                f.flush()
-                pass
+        lqid = translator.send("license", licensename)
+        if lqid is not None:
+            t.write(" {} - {}".format(licensename, lqid))
+            source = createsource(
+                "https://www.openhub.net/p/{}/licenses",
+                "The {} Open Source Project on Open Hub: Licenses Page",
+                openhubname
+            )
+            target = create_target("item", lqid)
+            create_andor_source(item, "P275", target, None, source, t.write)
 
         # forum = project.findtext("links/link[category='Forums']/url")
         # if forum is not None:
