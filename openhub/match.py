@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
 import re
+import xml
 
 import pywikibot
 import unidecode
 from tqdm import tqdm
 
-from oloho import get_cache_miss, oloho_getdata
+import oloho
 from wikidata import create_claim, create_target, runquery, wikidata
 
 query = """
@@ -42,10 +43,6 @@ def normurl(url):
     return url
 
 
-oh_api_key = open("mykey").readline()[:-1]
-mainapi = "p/{}.xml"
-
-
 # Get list of wikidata-items to edit
 wdlist = runquery(query)
 
@@ -61,20 +58,22 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
         if softwarename in done:
             continue
 
+        t.write("\n= {} - {} =".format(softwarename, guessed_name))
         try:
-            root = oloho_getdata(mainapi, guessed_name)
-            cachemiss = get_cache_miss()
-            t.postfix = "Api calls: %i" % cachemiss
-            item = pywikibot.ItemPage(wikidata, qid)
-        except Exception as e:
-            if e.args[0] == "API-Error" and e.args[1] == 401:
-                t.write("API Limit Exceeded")
-                break
-            t.write("\n%s %s" % (guessed_name, e))
+            project = oloho.getprojectdata(guessed_name)
+        except LookupError as e:
+            t.write(str(e))
             continue
-        t.write("\n={}=".format(softwarename))
+        except xml.etree.ElementTree.ParseError:
+            t.write("No valid XML found, project was probably deleted")
+            continue
+        except PermissionError:
+            t.write("API Limit Exceeded")
+            break
+        t.postfix = "Api calls: %i" % oloho.cache_miss
+        item = pywikibot.ItemPage(wikidata, qid)
 
-        website_oh = root.findtext("result/project/homepage_url")
+        website_oh = project.findtext("homepage_url")
         if normurl(website) == normurl(website_oh):
             t.write("match!")
             item.get()
@@ -91,6 +90,6 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
                 )
             )
 
-        if get_cache_miss() > 950:
-            t.write("Warning %s api-calls made. Exiting" % cachemiss)
+        if oloho.cache_miss > 950:
+            t.write("Warning %s api-calls made. Exiting" % oloho.cache_miss)
             break

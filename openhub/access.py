@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
+import xml
+
 import pywikibot
 from tqdm import tqdm
 
-from oloho import get_cache_miss, oloho_getdata
+import oloho
 from wikidata import (create_andor_source, create_claim, create_target,
                       createsource, get_counters, get_mapping, runquery,
                       wikidata)
@@ -15,10 +17,6 @@ SELECT DISTINCT ?item ?itemLabel ?openhubname WHERE
   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
 }
 """
-
-mainapi = "p/{}.xml"
-enlistmentsapi = "p/{}/enlistments.xml"
-
 
 lang_dict = get_mapping("P277")
 lang_dict["c"] = "Q15777"
@@ -52,28 +50,28 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
         softwarename = software["itemLabel"]["value"]
         openhubname = software["openhubname"]["value"]
 
-        t.write("\n{} – {}".format(softwarename, openhubname))
+        t.write("\n= {} – {} =".format(softwarename, openhubname))
         try:
-            root = oloho_getdata(mainapi, openhubname)
-            root_enlistments = oloho_getdata(enlistmentsapi, openhubname)
-            cachemiss = get_cache_miss()
-            t.postfix = "Api calls: %i" % cachemiss
-            item = pywikibot.ItemPage(wikidata, qid)
-            item.get()
-        except Exception as e:
-            if e.args[0] == "API-Error" and e.args[1] == 401:
-                t.write("API Limit Exceeded")
-                break
-            else:
-                t.write(str(e))
-                continue
+            project = oloho.getprojectdata(openhubname)
+            enlistments = oloho.getenlistments(openhubname)
+        except LookupError as e:
+            t.write(str(e))
+            continue
+        except xml.etree.ElementTree.ParseError:
+            t.write("No valid XML found, project was probably deleted")
+            continue
+        except PermissionError:
+            t.write("API Limit Exceeded")
+            break
+        t.postfix = "Api calls: %i" % oloho.cache_miss
+        item = pywikibot.ItemPage(wikidata, qid)
+        item.get()
 
-        # openhub_url = root.find("result/project/html_url")
+        # openhub_url = project.find("html_url")
 
-        repos = root_enlistments.findall("result/enlistment/code_location")
-        if len(repos) == 1:
-            repo_url = repos[0].findtext("url")
-            repo_type = repos[0].findtext("type")
+        if len(enlistments) == 1:
+            repo_url = enlistments[0].findtext("code_location/url")
+            repo_type = enlistments[0].findtext("code_location/type")
             if repo_type != "git":
                 continue
             t.write(" {} - {}".format(repo_url, repo_type))
@@ -87,7 +85,7 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
             qualifier = create_claim("P2700", create_target("item", "Q186055"))
             create_andor_source(item, "P1324", target, qualifier, source, t.write)
 
-        main_lang = root.findtext("result/project/analysis/main_language_name")
+        main_lang = project.findtext("analysis/main_language_name")
         if main_lang is not None:
             main_lang = main_lang.lower()
             if main_lang in lang_dict:
@@ -108,7 +106,7 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
                 f.flush()
                 pass
 
-        licensename = root.findtext("result/project/licenses/license/name")
+        licensename = project.findtext("licenses/license/name")
         if licensename is not None:
             licensename = licensename.lower()
             if licensename in license_dict:
@@ -127,7 +125,7 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
                 f.flush()
                 pass
 
-        # forum = root.findtext("result/project/links/link[category='Forums']/url")
+        # forum = project.findtext("links/link[category='Forums']/url")
         # if forum is not None:
         #     t.write(forum)
         #     pass  # Wikidata-Editing
