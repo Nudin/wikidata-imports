@@ -40,7 +40,8 @@ license_dict['bsd 2-clause "freebsd" license'] = "Q18517294"
 license_dict["zlib license (aka zlib/libpng)"] = "Q207243"
 license_dict["gnu lesser general public license v2.1 only"] = "Q18534390"
 
-f = open("unmatched_license_lang", "a")
+
+f = open("unmatched_license_lang", "w")
 
 # Get list of wikidata-items to edit
 wdlist = runquery(query)
@@ -104,6 +105,7 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
                 create_andor_source(item, "P277", target, None, source, t.write)
             else:
                 f.write(main_lang + "\n")
+                f.flush()
                 pass
 
         licensename = root.findtext("result/project/licenses/license/name")
@@ -122,6 +124,7 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
                 create_andor_source(item, "P275", target, None, source, t.write)
             else:
                 f.write(licensename + "\n")
+                f.flush()
                 pass
 
         # forum = root.findtext("result/project/links/link[category='Forums']/url")

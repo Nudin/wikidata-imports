@@ -84,6 +84,12 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
             target = create_target("string", guessed_name)
             claim = create_claim("P1972", target)
             item.addClaim(claim)
+        else:
+            print(
+                "URLs not matching: {} - {}".format(
+                    normurl(website), normurl(website_oh)
+                )
+            )
 
         if get_cache_miss() > 950:
             t.write("Warning %s api-calls made. Exiting" % cachemiss)
