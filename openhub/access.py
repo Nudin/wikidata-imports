@@ -23,6 +23,7 @@ enlistmentsapi = "p/{}/enlistments.xml"
 lang_dict = get_mapping("P277")
 lang_dict["c"] = "Q15777"
 lang_dict["java"] = "Q251"
+lang_dict["perl"] = "Q42478"
 
 license_dict = get_mapping("P275")
 license_dict['bsd 3-clause "new" or "revised" license'] = "Q18491847"
@@ -31,6 +32,13 @@ license_dict['gnu library or "lesser" gpl (lgpl)'] = "Q192897"
 license_dict["bsd 4-clause (university of california-specific)"] = "Q21503790"
 license_dict["gnu general public license v2.0 only"] = "Q10513450"
 license_dict["creative commons attribution-sharealike 2.5"] = "Q19113751"
+license_dict["mit license"] = "Q334661"
+license_dict["eclipse public license 1.0"] = "Q55633170"
+license_dict["gnu affero general public license 3.0 or later"] = "Q27020062"
+license_dict["gpl 2"] = "Q10513450"
+license_dict['bsd 2-clause "freebsd" license'] = "Q18517294"
+license_dict["zlib license (aka zlib/libpng)"] = "Q207243"
+license_dict["gnu lesser general public license v2.1 only"] = "Q18534390"
 
 f = open("unmatched_license_lang", "a")
 
