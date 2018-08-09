@@ -1,8 +1,17 @@
+import code
 import datetime
+import signal
 import urllib.parse
 
 import pywikibot
 import requests
+
+
+def debug_handler(signum, frame):
+    code.interact(local=globals())
+
+
+signal.signal(signal.SIGUSR1, debug_handler)
 
 wdqurl = "https://query.wikidata.org/sparql?format=json&query="
 
