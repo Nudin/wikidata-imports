@@ -13,7 +13,7 @@ from wikidata import (create_andor_source, create_claim, create_target,
 def coroutine(func):
     def start(*args, **kwargs):
         cr = func(*args, **kwargs)
-        cr.next()
+        next(cr)
         return cr
     return start
 
@@ -49,14 +49,14 @@ def translator(filename):
         while True:
             (group, obj) = (yield)
             if obj is None:
-                return None
+                yield None
             obj = obj.lower()
             if obj in tranlation_dict[group]:
-                return tranlation_dict[group][obj]
+                yield tranlation_dict[group][obj]
             else:
                 f.write(main_lang + "\n")
                 f.flush()
-                return None
+                yield None
 
 
 query = """
@@ -68,7 +68,7 @@ SELECT DISTINCT ?item ?itemLabel ?openhubname WHERE
 }
 """
 
-translator = translator("unmatched_license_lang")
+mytranslator = translator("unmatched_license_lang")
 
 # Get list of wikidata-items to edit
 wdlist = runquery(query)
@@ -114,7 +114,7 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
             create_andor_source(item, "P1324", target, qualifier, source, t.write)
 
         main_lang = project.findtext("analysis/main_language_name")
-        lqid = translator.send("lang", main_lang)
+        lqid = mytranslator.send(("lang", main_lang))
         if lqid is not None:
             t.write(" {} - {}".format(main_lang, lqid))
             source = createsource(
@@ -126,7 +126,7 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
             create_andor_source(item, "P277", target, None, source, t.write)
 
         licensename = project.findtext("licenses/license/name")
-        lqid = translator.send("license", licensename)
+        lqid = mytranslator.send(("license", licensename))
         if lqid is not None:
             t.write(" {} - {}".format(licensename, lqid))
             source = createsource(
