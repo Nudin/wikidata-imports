@@ -18,3 +18,4 @@ TODO:
  - Count added repos
  - Handle cases when data on wikidata and open hub disagrees
  - Handle multible repositories
+ - Write Game-API for matches with different URLs https://bitbucket.org/magnusmanske/wikidata-game/src/master/public_html/distributed/?at=master

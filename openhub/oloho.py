@@ -4,8 +4,6 @@ import xml.etree.ElementTree as ET
 import requests
 from joblib import Memory
 
-oh_api_key = open("mykey").readline()[:-1]
-
 queryapi = "projects.xml?query={}"
 mainapi = "p/{}.xml"
 enlistmentsapi = "p/{}/enlistments.xml"
@@ -21,6 +19,14 @@ if not os.path.exists(directory):
 memory = Memory(cachedir=directory, verbose=0)
 
 cache_miss = 0
+
+
+def use_key(num):
+    global oh_api_key
+    oh_api_key = open("mykey").readlines()[num][:-1]
+
+
+use_key(0)
 
 
 @memory.cache
@@ -69,6 +75,23 @@ def getprojectdata(olohoname):
         root = getdata(queryapi, olohoname)
         project = root.find("result/project")
         if project.findtext("name") == olohoname:
+            return project
+        else:
+            raise LookupError("Project not found")
+    else:
+        return root.find("result/project")
+
+
+def findproject(guessedname, name):
+    try:
+        root = getdata(mainapi, guessedname)
+        error = root.findtext("error")
+    except LookupError:
+        error = True
+    if error:
+        root = getdata(queryapi, name)
+        project = root.find("result/project")
+        if project and project.findtext("name") == name:
             return project
         else:
             raise LookupError("Project not found")

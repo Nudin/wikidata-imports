@@ -73,6 +73,8 @@ mytranslator = translator("unmatched_license_lang")
 # Get list of wikidata-items to edit
 wdlist = runquery(query)
 
+oloho.use_key(1)
+
 with tqdm(wdlist, postfix="Api calls: ") as t:
     for software in t:
         qid = software["item"]["value"][31:]

@@ -60,7 +60,8 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
 
         t.write("\n= {} - {} =".format(softwarename, guessed_name))
         try:
-            project = oloho.getprojectdata(guessed_name)
+            project = oloho.findproject(guessed_name, softwarename)
+            guessed_name = project.findtext("url_name")
         except LookupError as e:
             t.write(str(e))
             continue
@@ -84,7 +85,7 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
             claim = create_claim("P1972", target)
             item.addClaim(claim)
         else:
-            print(
+            t.write(
                 "URLs not matching: {} - {}".format(
                     normurl(website), normurl(website_oh)
                 )
