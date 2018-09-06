@@ -1,12 +1,13 @@
 #!/bin/env python3
-import pywikibot
-import datetime
 import csv
-import sys
-import signal
-import re
+import datetime
 import hashlib
+import re
+import signal
+import sys
 from os.path import join
+
+import pywikibot
 
 site = pywikibot.Site("wikidata", "wikidata")
 repo = site.data_repository()
@@ -96,7 +97,11 @@ with open('conf.csv', newline='') as f:
             if 'P348' in item.claims:
                 if version in map(lambda x: x.getTarget(), item.claims['P348']):
                     continue
-            date = datetime.datetime.strptime(datestr, dateformat).date()
+            try:
+                date = datetime.datetime.strptime(datestr, dateformat).date()
+            except ValueError:
+                print("Wrong dateformat %s %s" % (datestr, dateformat))
+                continue
             assert(date <= today)
             assert(date > datetime.date(1990, 1, 1))
             print("Adding version %s (date: %s)" % (version, date))
