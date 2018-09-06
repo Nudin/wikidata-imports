@@ -78,6 +78,17 @@ curl -sL https://www.fossil-scm.org/index.html/doc/trunk/www/changes.wiki | \
    tr '[()]' ' ' | \
    cut -d\  -f4,6 > fossil &
 
+curl -sL https://poppler.freedesktop.org/releases.html | \
+   awk '/poppler-[0-9.]*\.tar\.gz<\/a> (.*)/ {
+	 print gensub(/.*poppler-(.*)\.tar\.gz<\/a> \((.*)\).*/, "\\1\t\\2", "g", $0);
+      }' | \
+   tr ' ' '_' | tr -d ',' > poppler
+
+curl -s https://gitlab.gnome.org/GNOME/babl/raw/master/NEWS | \
+   grep -o -P '\d+-\d+-\d+ babl-[0-9.]+' | \
+   sed 's/ babl-/\t/' | \
+   awk '{print $2,$1}'> babl
+
 echo "Waiting for downloads to complete…"
 wait
 

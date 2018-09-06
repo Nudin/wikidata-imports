@@ -15,3 +15,5 @@ Q6930567,mupdf,%Y-%m-%d,https://mupdf.com/news.html,MuPDF News
 Q7725312,vagrant,%B-%d-%Y,https://raw.githubusercontent.com/hashicorp/vagrant/master/CHANGELOG.md,Vagrant Changelog
 Q608910,links,%a-%b-%d-%Y,http://links.twibright.com/download/ChangeLog,ChangeLog
 Q1439431,fossil,%Y-%m-%d,https://www.fossil-scm.org/index.html/doc/trunk/www/changes.wiki,FossilChange Log
+Q1347022,poppler,%a_%b_%d_%Y,https://poppler.freedesktop.org/releases.html,Poppler Releases
+Q28941635,babl,%Y-%m-%d,https://gitlab.gnome.org/GNOME/babl/raw/master/NEWS,NEWS file
