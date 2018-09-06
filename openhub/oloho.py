@@ -74,7 +74,7 @@ def getprojectdata(olohoname):
     if error and error.startswith("No Analysis to display for"):
         root = getdata(queryapi, olohoname)
         project = root.find("result/project")
-        if project.findtext("name") == olohoname:
+        if project is not None and project.findtext("name") == olohoname:
             return project
         else:
             raise LookupError("Project not found")
