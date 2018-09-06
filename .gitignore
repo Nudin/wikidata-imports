@@ -1,9 +1,17 @@
-# Pywikibot-Specific
+# Project specific
+openhub/mykey
+oloho_cache
+changelogs/versionlists
+
+# Pywikibot
 user-config.py
 pywikibot.lwp
 throttle.ctrl
 apicache
-openhub/mykey
+apicache-py3
+
+# git
+*.orig
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
