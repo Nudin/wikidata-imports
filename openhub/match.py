@@ -38,6 +38,7 @@ def normurl(url):
     url = url.replace("index.html", "")
     url = url.replace("index.htm", "")
     url = url.replace("index.php", "")
+    url = re.sub(r"http://(.*).sourceforge.net", r"http://sourceforge.net/p/\1", url)
     if url != "" and url[-1] == "/":
         url = url[0:-1]
     return url

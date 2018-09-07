@@ -2,6 +2,8 @@
 openhub/mykey
 oloho_cache
 changelogs/versionlists
+archcache
+unmatched_license_lang
 
 # Pywikibot
 user-config.py

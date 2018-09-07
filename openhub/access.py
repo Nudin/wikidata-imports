@@ -48,8 +48,9 @@ def translator(filename):
     with open(filename, "w") as f:
         while True:
             (group, obj) = (yield)
-            if obj is None:
+            if type(obj) != str:
                 yield None
+                continue
             obj = obj.lower()
             if obj in tranlation_dict[group]:
                 yield tranlation_dict[group][obj]
