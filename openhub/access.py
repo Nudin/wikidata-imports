@@ -15,6 +15,7 @@ def coroutine(func):
         cr = func(*args, **kwargs)
         next(cr)
         return cr
+
     return start
 
 
@@ -25,8 +26,10 @@ def translator(filename):
         "c": "Q15777",
         "java": "Q251",
         "perl": "Q42478",
-        **get_mapping("P277")
-        }
+        "tcl": "Q5288",
+        "lisp": "Q132874",
+        **get_mapping("P277"),
+    }
 
     tranlation_dict["license"] = {
         'bsd 3-clause "new" or "revised" license': "Q18491847",
@@ -43,8 +46,8 @@ def translator(filename):
         'bsd 2-clause "freebsd" license': "Q18517294",
         "zlib license (aka zlib/libpng)": "Q207243",
         "gnu lesser general public license v2.1 only": "Q18534390",
-        **get_mapping("P275")
-        }
+        **get_mapping("P275"),
+    }
     with open(filename, "w") as f:
         while True:
             (group, obj) = (yield)
@@ -99,8 +102,7 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
         item = pywikibot.ItemPage(wikidata, qid)
         item.get()
 
-        # openhub_url = project.find("html_url")
-
+        # Add source repositories
         if len(enlistments) == 1:
             repo_url = enlistments[0].findtext("code_location/url")
             repo_type = enlistments[0].findtext("code_location/type")
@@ -123,11 +125,12 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
             source = createsource(
                 "https://www.openhub.net/p/{}/analyses/latest/languages_summary",
                 "The {} Open Source Project on Open Hub: Languages Page",
-                openhubname
+                openhubname,
             )
             target = create_target("item", lqid)
             create_andor_source(item, "P277", target, None, source, t.write)
 
+        # Add project license
         licensename = project.findtext("licenses/license/name")
         lqid = mytranslator.send(("license", licensename))
         if lqid is not None:
@@ -135,11 +138,13 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
             source = createsource(
                 "https://www.openhub.net/p/{}/licenses",
                 "The {} Open Source Project on Open Hub: Licenses Page",
-                openhubname
+                openhubname,
             )
             target = create_target("item", lqid)
             create_andor_source(item, "P275", target, None, source, t.write)
 
+        # openhub_url = project.find("html_url")
+        #
         # forum = project.findtext("links/link[category='Forums']/url")
         # if forum is not None:
         #     t.write(forum)
