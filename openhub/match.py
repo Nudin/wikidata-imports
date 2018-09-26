@@ -13,8 +13,16 @@ from wikidata import create_claim, create_target, runquery, wikidata
 query = """
 SELECT DISTINCT ?item ?itemLabel ?website WHERE
 {
-  ?item wdt:P275 ?freelicense.
-  ?freelicense (wdt:P31/wdt:P279*) wd:Q3943414.
+  {
+   # is a free software
+   ?item wdt:P31/wdt:P279* wd:Q341.
+  } Union {
+    # license is a free license
+    ?item wdt:P275 ?freelicense.
+    ?freelicense (wdt:P31/wdt:P279*) ?kind.
+    VALUES ?kind { wd:Q196294 wd:Q1156659 wd:Q3943414 }.
+  }
+
   ?item wdt:P856 ?website.
   MINUS {?item wdt:P1972 ?openhubname}.
   MINUS { ?item wdt:P31*/wdt:P279* wd:Q9135 }.
