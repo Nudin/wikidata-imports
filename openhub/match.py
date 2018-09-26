@@ -52,6 +52,10 @@ def normurl(url):
     return url
 
 
+oloho.use_key(0)
+counter = 0
+
+
 # Get list of wikidata-items to edit
 wdlist = runquery(query)
 
@@ -93,6 +97,7 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
             target = create_target("string", guessed_name)
             claim = create_claim("P1972", target)
             item.addClaim(claim)
+            counter += 1
         else:
             t.write(
                 "URLs not matching: {} - {}".format(
@@ -103,3 +108,5 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
         if oloho.cache_miss > 950:
             t.write("Warning %s api-calls made. Exiting" % oloho.cache_miss)
             break
+
+print("Added {} matches".format(counter))
