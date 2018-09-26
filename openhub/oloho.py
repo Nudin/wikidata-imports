@@ -74,7 +74,7 @@ def getprojectdata(olohoname):
     if error and error.startswith("No Analysis to display for"):
         root = getdata(queryapi, olohoname)
         project = root.find("result/project")
-        if project is not None and project.findtext("name") == olohoname:
+        if project is not None and project.findtext("url_name") == olohoname:
             return project
         else:
             raise LookupError("Project not found")
@@ -103,5 +103,8 @@ def getenlistments(olohoname):
     """
     Get the enlistments via the (cached) API.
     """
-    root = getdata(enlistmentsapi, olohoname)
-    return root.findall("result/enlistment")
+    try:
+        root = getdata(enlistmentsapi, olohoname)
+        return root.findall("result/enlistment")
+    except LookupError:
+        return []

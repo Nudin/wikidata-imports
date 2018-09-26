@@ -104,18 +104,18 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
         if len(enlistments) == 1:
             repo_url = enlistments[0].findtext("code_location/url")
             repo_type = enlistments[0].findtext("code_location/type")
-            if repo_type != "git":
-                continue
-            t.write(" {} - {}".format(repo_url, repo_type))
-            source = createsource(
-                "https://www.openhub.net/p/{}/enlistments",
-                "The {} Open Source Project on Open Hub: Code Locations Page",
-                openhubname
-            )
-            target = create_target("string", repo_url)
-            qualifier = create_claim("P2700", create_target("item", "Q186055"))
-            create_andor_source(item, "P1324", target, qualifier, source, t.write)
+            if repo_type == "git":
+                t.write(" {} - {}".format(repo_url, repo_type))
+                source = createsource(
+                    "https://www.openhub.net/p/{}/enlistments",
+                    "The {} Open Source Project on Open Hub: Code Locations Page",
+                    openhubname,
+                )
+                target = create_target("string", repo_url)
+                qualifier = create_claim("P2700", create_target("item", "Q186055"))
+                create_andor_source(item, "P1324", target, qualifier, source, t.write)
 
+        # Add main programing language
         main_lang = project.findtext("analysis/main_language_name")
         lqid = mytranslator.send(("lang", main_lang))
         if lqid is not None:
