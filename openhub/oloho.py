@@ -91,7 +91,7 @@ def findproject(guessedname, name):
     if error:
         root = getdata(queryapi, name)
         project = root.find("result/project")
-        if project and project.findtext("name") == name:
+        if project and name in project.findtext("name"):  # TODO better heuristics
             return project
         else:
             raise LookupError("Project not found")

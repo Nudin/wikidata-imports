@@ -16,17 +16,19 @@ SELECT DISTINCT ?item ?itemLabel ?website WHERE
   {
    # is a free software
    ?item wdt:P31/wdt:P279* wd:Q341.
+   # ?item wdt:P31/wdt:P279* wd:Q1130645.
   } Union {
     # license is a free license
     ?item wdt:P275 ?freelicense.
-    ?freelicense (wdt:P31/wdt:P279*) ?kind.
+    ?freelicense (wdt:P31*/wdt:P279*) ?kind.
     VALUES ?kind { wd:Q196294 wd:Q1156659 wd:Q3943414 }.
   }
 
-  ?item wdt:P856 ?website.
+  # ?item wdt:P856 ?website.
+  ?item wdt:P1324 ?website.
   MINUS {?item wdt:P1972 ?openhubname}.
   MINUS { ?item wdt:P31*/wdt:P279* wd:Q9135 }.
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en,de,fr". }
 }
 """
 
@@ -37,12 +39,14 @@ def normurl(url):
     if url is None:
         return ""
     url = url.lower()
-    # special treatment for kde – they often have more than one site
-    # and theres never more than one kde-application with the same name
+    # special treatment for kde/gnome – they often have more than one site
+    # and theres never more than one kde/gnome-application with the same name
     if "kde.org" in url:
         return "kde.org"
-    url = url.replace("https:", "http:")
+    if "gnome.org" in url:
+        return "gnome.org"
     url = url.replace("://www.", "://")
+    url = re.sub(r"^[a-z]+://", "", url)
     url = url.replace("index.html", "")
     url = url.replace("index.htm", "")
     url = url.replace("index.php", "")
@@ -75,6 +79,7 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
         try:
             project = oloho.findproject(guessed_name, softwarename)
             guessed_name = project.findtext("url_name")
+            enlistments = oloho.getenlistments(guessed_name)
         except LookupError as e:
             t.write(str(e))
             continue
@@ -88,7 +93,10 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
         item = pywikibot.ItemPage(wikidata, qid)
 
         website_oh = project.findtext("homepage_url")
-        if normurl(website) == normurl(website_oh):
+        repo_url = ""
+        if len(enlistments) == 1:
+            repo_url = enlistments[0].findtext("code_location/url")
+        if normurl(website) == normurl(repo_url):
             t.write("match!")
             item.get()
             done.append(softwarename)
@@ -100,9 +108,7 @@ with tqdm(wdlist, postfix="Api calls: ") as t:
             counter += 1
         else:
             t.write(
-                "URLs not matching: {} - {}".format(
-                    normurl(website), normurl(website_oh)
-                )
+                "URLs not matching: {} - {}".format(normurl(website), normurl(repo_url))
             )
 
         if oloho.cache_miss > 950:

@@ -16,6 +16,9 @@ TODO:
  - Log failed API calls
  - match:
      - Write Game-API for matches with different URLs https://bitbucket.org/magnusmanske/wikidata-game/src/master/public_html/distributed/?at=master
+     - Improve Query to match all potential items
+     - Also match on repo-url
+     - Check different urls for redirects
  - access:
      - If one of the two API calls fails, don't skip it the item entirely
      - Count added repos
