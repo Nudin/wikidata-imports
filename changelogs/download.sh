@@ -79,8 +79,8 @@ curl -sL https://www.fossil-scm.org/index.html/doc/trunk/www/changes.wiki | \
    cut -d\  -f4,6 > fossil &
 
 curl -sL https://poppler.freedesktop.org/releases.html | \
-   awk '/poppler-[0-9.]*\.tar\.gz<\/a> (.*)/ {
-	 print gensub(/.*poppler-(.*)\.tar\.gz<\/a> \((.*)\).*/, "\\1\t\\2", "g", $0);
+   awk '/poppler-[0-9.]*\.tar\..z<\/a> (.*)/ {
+	 print gensub(/.*poppler-(.*)\.tar\..z<\/a> \((.*)\).*/, "\\1\t\\2", "g", $0);
       }' | \
    tr ' ' '_' | tr -d ',' > poppler
 

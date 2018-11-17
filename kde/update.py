@@ -6,9 +6,9 @@ import urllib.parse
 import pywikibot
 import requests
 
-oldversion = "18.08.0"
-newversion = "18.08.1"
-pdate = pywikibot.WbTime(2018, 9, 4)
+oldversion = "18.08.1"
+newversion = "18.08.2"
+pdate = pywikibot.WbTime(2018, 10, 9)
 
 
 wdqurl = "https://query.wikidata.org/sparql?format=json&query="
