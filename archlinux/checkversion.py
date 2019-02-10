@@ -25,6 +25,8 @@ template = env.get_template("versioncomparing.html.jinja")
 
 
 archurl = "https://www.archlinux.org/packages/search/json/?name={}"
+archconn = requests.Session()
+
 # List of repos in which we want to search
 repos = [
     "Community",
@@ -208,8 +210,8 @@ memory = Memory(cachedir=directory, verbose=0)
 
 
 # Run a query against a web-api
-def runquery(url):
-    r = requests.get(url)
+def runquery(url, session=requests):
+    r = session.get(url)
     if r.status_code == 200:
         return r.json()["results"]
     else:
@@ -230,7 +232,7 @@ def getSPARQLcountvalue(query):
 def runarchquery(software):
     global cachemisscounter
     cachemisscounter += 1
-    searchres = runquery(archurl.format(urllib.parse.quote_plus(software)))
+    searchres = runquery(archurl.format(urllib.parse.quote_plus(software)), archconn)
     if searchres == []:
         return None
     return searchres[0]["pkgver"].split("+")[0]

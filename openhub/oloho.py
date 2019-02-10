@@ -8,6 +8,8 @@ queryapi = "projects.xml?query={}"
 mainapi = "p/{}.xml"
 enlistmentsapi = "p/{}/enlistments.xml"
 
+session = requests.Session()
+
 # Set up cache so we don't query the oloho api every time
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
@@ -39,7 +41,7 @@ def _getdata_(query, olohoname):
     else:
         url += "?api_key="
     url += oh_api_key
-    r = requests.get(url)
+    r = session.get(url)
     if r.status_code == 404:
         return None
     elif r.status_code == 401:
